@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<PublishAot>true</PublishAot>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<IsPackable>false</IsPackable>
+		<RootNamespace>Module</RootNamespace>
+		<AssemblyName>$(MSBuildProjectName.Replace(".", ""))_amxx</AssemblyName>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<AmxxModuleName>ZpNewWeapon</AmxxModuleName>
+		<AmxxModuleVersion>1.0</AmxxModuleVersion>
+		<AmxxModuleAuthor>Fly (原版 Pawn) / GoldSrcMod.Net C# 移植</AmxxModuleAuthor>
+		<AmxxModuleUrl></AmxxModuleUrl>
+		<AmxxModuleLogTag>ZPWPN</AmxxModuleLogTag>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Amxmodx.Framework" Version="1.1.0" />
+		<PackageReference Include="Amxmodx.SourceGenerator" Version="1.1.0" PrivateAssets="all" />
+	</ItemGroup>
+
+</Project>

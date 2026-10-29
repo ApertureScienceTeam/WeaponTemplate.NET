@@ -1,0 +1,15 @@
+# Build results
+bin/
+obj/
+artifacts/
+publish/
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+
+# NativeAOT intermediate
+*.exp
+*.lib

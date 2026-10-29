@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/WeaponExtend/WeaponExtend.csproj" />
+    <Project Path="src/WeaponTemplate/WeaponTemplate.csproj" />
+    <Project Path="src/ZpNewWeapon/ZpNewWeapon.csproj" />
+  </Folder>
+</Solution>

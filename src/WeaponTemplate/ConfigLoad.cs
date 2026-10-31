@@ -189,8 +189,7 @@ public static unsafe class ConfigLoad
         foreach (var (serialText, entries) in blocks)
         {
             int serial = ToInt(serialText);
-            if (serial <= 0 || serial >= WpnConst.MaxWeapon ||
-                Store.WeaponTemplateSerialNumber[slot, serial] != 0 || !Store.CanRegister)
+            if (serial <= 0 || Store.Config.HasSerial(slot, serial) || !Store.CanRegister)
             {
                 MF.Log($"[error] invalid/duplicate template serial or capacity exceeded: {path} serial={serialText}");
                 continue;
@@ -221,8 +220,8 @@ public static unsafe class ConfigLoad
                 continue;
             }
             if (!Store.TryCreateTemplate(out int index)) continue;
-            Store.WeaponTemplateSerialNumber[slot, serial] = index;
-            for (int id = 1; id < 33; id++) Store.WeaponId[id, index] = csw;
+            Store.Config.SetSerial(slot, serial, index);
+            Store.Config[index].Id = csw;
             MF.Log($"[diag] template slot={slot} serial={serial} index={index} csw={csw} " +
                 $"buy='{entries.LastOrDefault(e => e.Key == "购买命令").Value}' " +
                 $"cost='{entries.LastOrDefault(e => e.Key == "价格").Value}' " +
@@ -243,118 +242,112 @@ public static unsafe class ConfigLoad
             if (key == "类型")
             {
                 int csw = StrToCsw(value);
-                for (int id = 1; id < 33; id++) Store.WeaponId[id, template.Index] = csw;
+                Store.Config[template.Index].Id = csw;
             }
             else if (key == "上弹模式")
             {
                 int mode = ToInt(value);
-                for (int id = 1; id < 33; id++) Store.ReloadMode[id, template.Index] = mode;
+                Store.Config[template.Index].ReloadMode = mode;
             }
             else if (key == "开启机瞄")
             {
-                int sight = ToInt(value);
-                for (int id = 1; id < 33; id++)
-                {
-                    int w = Store.WeaponId[id, template.Index];
-                    if (w != EngineConst.CswG3sg1 && w != EngineConst.CswSg550 && w != EngineConst.CswAwp && w != EngineConst.CswScout)
-                        Store.WeaponSight[id, template.Index] = sight;
-                    else
-                        Store.WeaponSight[id, template.Index] = 0;
-                }
+                var weapon = Store.Config[template.Index];
+                weapon.Sight = weapon.Id is EngineConst.CswG3sg1 or EngineConst.CswSg550 or EngineConst.CswAwp or EngineConst.CswScout
+                    ? 0 : ToInt(value);
             }
-            else if (key == "子弹数") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponClip[id, template.Index] = v; }
-            else if (key == "备用子弹数") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAmmo[id, template.Index] = v; }
-            else if (key == "伤害倍数") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponDamage[id, template.Index] = v; }
-            else if (key == "武器射速") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponSpeed[id, template.Index] = v; }
-            else if (key == "武器开镜射速") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponAimSpeed[id, template.Index] = v; }
-            else if (key == "武器消音射速") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponSilencedSpeed[id, template.Index] = v; }
-            else if (key == "武器后座") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponRecoil[id, template.Index] = v; }
-            else if (key == "武器开镜后座") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponAimRecoil[id, template.Index] = v; }
-            else if (key == "武器消音后座") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponSilencedRecoil[id, template.Index] = v; }
-            else if (key == "武器准确度") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponAccuracy[id, template.Index] = v; }
-            else if (key == "武器开镜准确度") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponAimAccuracy[id, template.Index] = v; }
-            else if (key == "武器消音准确度") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponSilencedAccuracy[id, template.Index] = v; }
-            else if (key == "开启消音时间") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponSilencedTime[id, template.Index, 0] = v; }
-            else if (key == "关闭消音时间") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponSilencedTime[id, template.Index, 1] = v; }
-            else if (key == "镜头距离") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.SightDistance[id, template.Index] = v; }
-            else if (key == "镜头变化幅度") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.SightFrameRate[id, template.Index] = v; }
-            else if (key == "开启速度") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.SightOpenTime[id, template.Index] = v; }
-            else if (key == "关闭速度") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.SightCloseTime[id, template.Index] = v; }
-            else if (key == "换弹时间") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponReloadTime[id, template.Index, 0] = v; }
-            else if (key == "散弹开始换弹时间") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponReloadTime[id, template.Index, 1] = v; }
-            else if (key == "散弹结束换弹时间") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponReloadTime[id, template.Index, 2] = v; }
-            else if (key == "掏出时间") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponDrawTime[id, template.Index] = v; }
-            else if (key == "行走速度") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponMaxSpeed[id, template.Index] = v; }
-            else if (key == "开镜行走速度") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponAimMaxSpeed[id, template.Index] = v; }
-            else if (key == "击退力度") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponKnockBack[id, template.Index] = v; }
-            else if (key == "价格") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponCost[id, template.Index] = v; }
-            else if (key == "子弹价格") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAmmoCost[id, template.Index] = v; }
-            else if (key == "队伍") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponTeam[id, template.Index] = v; }
-            else if (key == "HUD菜单") { for (int id = 1; id < 33; id++) Store.WeaponList[id, template.Index] = value; }
-            else if (key == "杀敌SPR") { for (int id = 1; id < 33; id++) Store.WeaponSpr[id, template.Index] = value; }
-            else if (key == "W模型子模型序号") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponWModelBody[id, template.Index] = v; }
+            else if (key == "子弹数") { int v = ToInt(value); Store.Config[template.Index].Clip = v; }
+            else if (key == "备用子弹数") { int v = ToInt(value); Store.Config[template.Index].Ammo = v; }
+            else if (key == "伤害倍数") { float v = ToFloat(value); Store.Config[template.Index].Damage = v; }
+            else if (key == "武器射速") { float v = ToFloat(value); Store.Config[template.Index].Speed = v; }
+            else if (key == "武器开镜射速") { float v = ToFloat(value); Store.Config[template.Index].AimSpeed = v; }
+            else if (key == "武器消音射速") { float v = ToFloat(value); Store.Config[template.Index].SilencedSpeed = v; }
+            else if (key == "武器后座") { float v = ToFloat(value); Store.Config[template.Index].Recoil = v; }
+            else if (key == "武器开镜后座") { float v = ToFloat(value); Store.Config[template.Index].AimRecoil = v; }
+            else if (key == "武器消音后座") { float v = ToFloat(value); Store.Config[template.Index].SilencedRecoil = v; }
+            else if (key == "武器准确度") { float v = ToFloat(value); Store.Config[template.Index].Accuracy = v; }
+            else if (key == "武器开镜准确度") { float v = ToFloat(value); Store.Config[template.Index].AimAccuracy = v; }
+            else if (key == "武器消音准确度") { float v = ToFloat(value); Store.Config[template.Index].SilencedAccuracy = v; }
+            else if (key == "开启消音时间") { float v = ToFloat(value); Store.Config[template.Index].SilencedTime[0] = v; }
+            else if (key == "关闭消音时间") { float v = ToFloat(value); Store.Config[template.Index].SilencedTime[1] = v; }
+            else if (key == "镜头距离") { float v = ToFloat(value); Store.Config[template.Index].SightDistance = v; }
+            else if (key == "镜头变化幅度") { float v = ToFloat(value); Store.Config[template.Index].SightFrameRate = v; }
+            else if (key == "开启速度") { float v = ToFloat(value); Store.Config[template.Index].SightOpenTime = v; }
+            else if (key == "关闭速度") { float v = ToFloat(value); Store.Config[template.Index].SightCloseTime = v; }
+            else if (key == "换弹时间") { float v = ToFloat(value); Store.Config[template.Index].ReloadTime[0] = v; }
+            else if (key == "散弹开始换弹时间") { float v = ToFloat(value); Store.Config[template.Index].ReloadTime[1] = v; }
+            else if (key == "散弹结束换弹时间") { float v = ToFloat(value); Store.Config[template.Index].ReloadTime[2] = v; }
+            else if (key == "掏出时间") { float v = ToFloat(value); Store.Config[template.Index].DrawTime = v; }
+            else if (key == "行走速度") { float v = ToFloat(value); Store.Config[template.Index].MaxSpeed = v; }
+            else if (key == "开镜行走速度") { float v = ToFloat(value); Store.Config[template.Index].AimMaxSpeed = v; }
+            else if (key == "击退力度") { float v = ToFloat(value); Store.Config[template.Index].KnockBack = v; }
+            else if (key == "价格") { int v = ToInt(value); Store.Config[template.Index].Cost = v; }
+            else if (key == "子弹价格") { int v = ToInt(value); Store.Config[template.Index].AmmoCost = v; }
+            else if (key == "队伍") { int v = ToInt(value); Store.Config[template.Index].Team = v; }
+            else if (key == "HUD菜单") { Store.Config[template.Index].List = value; }
+            else if (key == "杀敌SPR") { Store.Config[template.Index].Spr = value; }
+            else if (key == "W模型子模型序号") { int v = ToInt(value); Store.Config[template.Index].WModelBody = v; }
             else if (key == "P模型")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponPModel[id, template.Index] = value;
+                Store.Config[template.Index].PModel = value;
                 if (value.Length > 0) Eng.PrecacheModel(value);
             }
             else if (key == "V模型")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponVModel[id, template.Index] = value;
+                Store.Config[template.Index].VModel = value;
                 if (value.Length > 0) Eng.PrecacheModel(value);
             }
             else if (key == "W模型")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponWModel[id, template.Index] = value;
+                Store.Config[template.Index].WModel = value;
                 if (value.Length > 0) Eng.PrecacheModel(value);
             }
             else if (key == "机瞄模型")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponVModelS[id, template.Index] = value;
+                Store.Config[template.Index].SightModel = value;
                 if (value.Length > 0) Eng.PrecacheModel(value);
             }
             else if (key == "开枪声音1")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponSound1[id, template.Index] = value;
+                Store.Config[template.Index].Sound1 = value;
                 if (value.Length > 0) Eng.PrecacheSound(value);
             }
             else if (key == "开枪声音2")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponSound2[id, template.Index] = value;
+                Store.Config[template.Index].Sound2 = value;
                 if (value.Length > 0) Eng.PrecacheSound(value);
             }
             else if (key == "消音开枪声音1")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponSound3[id, template.Index] = value;
+                Store.Config[template.Index].Sound3 = value;
                 if (value.Length > 0) Eng.PrecacheSound(value);
             }
             else if (key == "消音开枪声音2")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponSound4[id, template.Index] = value;
+                Store.Config[template.Index].Sound4 = value;
                 if (value.Length > 0) Eng.PrecacheSound(value);
             }
-            else if (key == "开枪声音大小") { float v = ToAttenuation(value, 0.35f); for (int id = 1; id < 33; id++) Store.WeaponFireSoundVolume[id, template.Index] = v; }
-            else if (key == "消音开枪声音大小") { float v = ToAttenuation(value, EngineConst.AttnNorm); for (int id = 1; id < 33; id++) Store.WeaponSilenceFireSoundVolume[id, template.Index] = v; }
-            else if (key == "购买命令") { for (int id = 1; id < 33; id++) Store.WeaponBuyCommand[id, template.Index] = value; }
-            else if (key == "静止动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimIdle] = v; }
-            else if (key == "换弹动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimReload] = v; }
-            else if (key == "掏出动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimDraw] = v; }
-            else if (key == "射击动作1") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimShoot1] = v; }
-            else if (key == "射击动作2") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimShoot2] = v; }
-            else if (key == "射击动作3") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimShoot3] = v; }
-            else if (key == "散弹换弹开始") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimStartReload] = v; }
-            else if (key == "散弹换弹装弹") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimInsert] = v; }
-            else if (key == "散弹换弹结束") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimAfterReload] = v; }
-            else if (key == "机瞄开启动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimSightOpen] = v; }
-            else if (key == "机瞄关闭动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimSightClose] = v; }
-            else if (key == "消音开启动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimAttachSilencer] = v; }
-            else if (key == "消音关闭动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimDetachSilencer] = v; }
-            else if (key == "消音静止动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimIdleSilenced] = v; }
-            else if (key == "消音换弹动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimReloadSilenced] = v; }
-            else if (key == "消音掏出动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimDrawSilenced] = v; }
-            else if (key == "消音射击动作1") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimShoot1Silenced] = v; }
-            else if (key == "消音射击动作2") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimShoot2Silenced] = v; }
-            else if (key == "消音射击动作3") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponAnim[id, template.Index, WpnConst.AnimShoot3Silenced] = v; }
+            else if (key == "开枪声音大小") { float v = ToAttenuation(value, 0.35f); Store.Config[template.Index].FireSoundVolume = v; }
+            else if (key == "消音开枪声音大小") { float v = ToAttenuation(value, EngineConst.AttnNorm); Store.Config[template.Index].SilenceFireSoundVolume = v; }
+            else if (key == "购买命令") { Store.Config[template.Index].BuyCommand = value; }
+            else if (key == "静止动作") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimIdle] = v; }
+            else if (key == "换弹动作") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimReload] = v; }
+            else if (key == "掏出动作") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimDraw] = v; }
+            else if (key == "射击动作1") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimShoot1] = v; }
+            else if (key == "射击动作2") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimShoot2] = v; }
+            else if (key == "射击动作3") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimShoot3] = v; }
+            else if (key == "散弹换弹开始") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimStartReload] = v; }
+            else if (key == "散弹换弹装弹") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimInsert] = v; }
+            else if (key == "散弹换弹结束") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimAfterReload] = v; }
+            else if (key == "机瞄开启动作") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimSightOpen] = v; }
+            else if (key == "机瞄关闭动作") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimSightClose] = v; }
+            else if (key == "消音开启动作") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimAttachSilencer] = v; }
+            else if (key == "消音关闭动作") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimDetachSilencer] = v; }
+            else if (key == "消音静止动作") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimIdleSilenced] = v; }
+            else if (key == "消音换弹动作") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimReloadSilenced] = v; }
+            else if (key == "消音掏出动作") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimDrawSilenced] = v; }
+            else if (key == "消音射击动作1") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimShoot1Silenced] = v; }
+            else if (key == "消音射击动作2") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimShoot2Silenced] = v; }
+            else if (key == "消音射击动作3") { int v = ToInt(value); Store.Config[template.Index].Anim[WpnConst.AnimShoot3Silenced] = v; }
 
             NotifyLoadFiles(WpnConst.SlotWeapon, template.Index, key, value);
         }
@@ -368,85 +361,85 @@ public static unsafe class ConfigLoad
         foreach (var (key, value) in template.Entries)
         {
 
-            if (key == "轻击结束时间") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.KnifeSlashResetTime[id, template.Index] = v; }
-            else if (key == "轻击延迟时间") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.KnifeSlashTime[id, template.Index] = v; }
-            else if (key == "轻击距离") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.KnifeSlashRange[id, template.Index] = v; }
-            else if (key == "轻击角度") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.KnifeSlashAngle[id, template.Index] = v; }
-            else if (key == "轻击角度判断间隔") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.KnifeSlashAngleOffset[id, template.Index] = v; }
-            else if (key == "轻击高度") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.KnifeSlashHeight[id, template.Index] = v; }
-            else if (key == "轻击高度判断间隔") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.KnifeSlashHeightOffset[id, template.Index] = v; }
-            else if (key == "重击结束时间") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.KnifeStabResetTime[id, template.Index] = v; }
-            else if (key == "重击延迟时间") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.KnifeStabTime[id, template.Index] = v; }
-            else if (key == "重击距离") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.KnifeStabRange[id, template.Index] = v; }
-            else if (key == "重击角度") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.KnifeStabAngle[id, template.Index] = v; }
-            else if (key == "重击角度判断间隔") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.KnifeStabAngleOffset[id, template.Index] = v; }
-            else if (key == "重击高度") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.KnifeStabHeight[id, template.Index] = v; }
-            else if (key == "重击高度判断间隔") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.KnifeStabHeightOffset[id, template.Index] = v; }
-            else if (key == "掏出时间") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponDrawTime[id, template.Index] = v; }
-            else if (key == "伤害倍数") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponDamage[id, template.Index] = v; }
-            else if (key == "重击伤害倍数") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponDamage2[id, template.Index] = v; }
-            else if (key == "行走速度") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponMaxSpeed[id, template.Index] = v; }
-            else if (key == "击退") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponKnockBack[id, template.Index] = v; }
-            else if (key == "价格") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponCost[id, template.Index] = v; }
-            else if (key == "队伍") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponTeam[id, template.Index] = v; }
-            else if (key == "HUD菜单") { for (int id = 1; id < 33; id++) Store.WeaponList[id, template.Index] = value; }
-            else if (key == "杀敌SPR") { for (int id = 1; id < 33; id++) Store.WeaponSpr[id, template.Index] = value; }
+            if (key == "轻击结束时间") { float v = ToFloat(value); Store.Config[template.Index].KnifeSlashResetTime = v; }
+            else if (key == "轻击延迟时间") { float v = ToFloat(value); Store.Config[template.Index].KnifeSlashTime = v; }
+            else if (key == "轻击距离") { float v = ToFloat(value); Store.Config[template.Index].KnifeSlashRange = v; }
+            else if (key == "轻击角度") { float v = ToFloat(value); Store.Config[template.Index].KnifeSlashAngle = v; }
+            else if (key == "轻击角度判断间隔") { float v = ToFloat(value); Store.Config[template.Index].KnifeSlashAngleOffset = v; }
+            else if (key == "轻击高度") { float v = ToFloat(value); Store.Config[template.Index].KnifeSlashHeight = v; }
+            else if (key == "轻击高度判断间隔") { float v = ToFloat(value); Store.Config[template.Index].KnifeSlashHeightOffset = v; }
+            else if (key == "重击结束时间") { float v = ToFloat(value); Store.Config[template.Index].KnifeStabResetTime = v; }
+            else if (key == "重击延迟时间") { float v = ToFloat(value); Store.Config[template.Index].KnifeStabTime = v; }
+            else if (key == "重击距离") { float v = ToFloat(value); Store.Config[template.Index].KnifeStabRange = v; }
+            else if (key == "重击角度") { float v = ToFloat(value); Store.Config[template.Index].KnifeStabAngle = v; }
+            else if (key == "重击角度判断间隔") { float v = ToFloat(value); Store.Config[template.Index].KnifeStabAngleOffset = v; }
+            else if (key == "重击高度") { float v = ToFloat(value); Store.Config[template.Index].KnifeStabHeight = v; }
+            else if (key == "重击高度判断间隔") { float v = ToFloat(value); Store.Config[template.Index].KnifeStabHeightOffset = v; }
+            else if (key == "掏出时间") { float v = ToFloat(value); Store.Config[template.Index].DrawTime = v; }
+            else if (key == "伤害倍数") { float v = ToFloat(value); Store.Config[template.Index].Damage = v; }
+            else if (key == "重击伤害倍数") { float v = ToFloat(value); Store.Config[template.Index].Damage2 = v; }
+            else if (key == "行走速度") { float v = ToFloat(value); Store.Config[template.Index].MaxSpeed = v; }
+            else if (key == "击退") { float v = ToFloat(value); Store.Config[template.Index].KnockBack = v; }
+            else if (key == "价格") { int v = ToInt(value); Store.Config[template.Index].Cost = v; }
+            else if (key == "队伍") { int v = ToInt(value); Store.Config[template.Index].Team = v; }
+            else if (key == "HUD菜单") { Store.Config[template.Index].List = value; }
+            else if (key == "杀敌SPR") { Store.Config[template.Index].Spr = value; }
             else if (key == "P模型")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponPModel[id, template.Index] = value;
+                Store.Config[template.Index].PModel = value;
                 if (value.Length > 0) Eng.PrecacheModel(value);
             }
             else if (key == "V模型")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponVModel[id, template.Index] = value;
+                Store.Config[template.Index].VModel = value;
                 if (value.Length > 0) Eng.PrecacheModel(value);
             }
             else if (key == "掏出声音")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponSound1[id, template.Index] = value;
+                Store.Config[template.Index].Sound1 = value;
                 if (value.Length > 0) Eng.PrecacheSound(value);
             }
             else if (key == "击墙声音")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponSound2[id, template.Index] = value;
+                Store.Config[template.Index].Sound2 = value;
                 if (value.Length > 0) Eng.PrecacheSound(value);
             }
             else if (key == "击空声音")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponSound3[id, template.Index] = value;
+                Store.Config[template.Index].Sound3 = value;
                 if (value.Length > 0) Eng.PrecacheSound(value);
             }
             else if (key == "重击声音")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponSound4[id, template.Index] = value;
+                Store.Config[template.Index].Sound4 = value;
                 if (value.Length > 0) Eng.PrecacheSound(value);
             }
             else if (key == "轻击声音1")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponSound5[id, template.Index] = value;
+                Store.Config[template.Index].Sound5 = value;
                 if (value.Length > 0) Eng.PrecacheSound(value);
             }
             else if (key == "轻击声音2")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponSound6[id, template.Index] = value;
+                Store.Config[template.Index].Sound6 = value;
                 if (value.Length > 0) Eng.PrecacheSound(value);
             }
-            else if (key == "击墙声音大小") { float v = ToAttenuation(value, EngineConst.AttnNorm); for (int id = 1; id < 33; id++) Store.KnifeSoundVolume[id, template.Index, 0] = v; }
-            else if (key == "击空声音大小") { float v = ToAttenuation(value, EngineConst.AttnNorm); for (int id = 1; id < 33; id++) Store.KnifeSoundVolume[id, template.Index, 1] = v; }
-            else if (key == "重击声音大小") { float v = ToAttenuation(value, EngineConst.AttnNorm); for (int id = 1; id < 33; id++) Store.KnifeSoundVolume[id, template.Index, 2] = v; }
-            else if (key == "轻击声音1大小") { float v = ToAttenuation(value, EngineConst.AttnNorm); for (int id = 1; id < 33; id++) Store.KnifeSoundVolume[id, template.Index, 3] = v; }
-            else if (key == "轻击声音2大小") { float v = ToAttenuation(value, EngineConst.AttnNorm); for (int id = 1; id < 33; id++) Store.KnifeSoundVolume[id, template.Index, 4] = v; }
-            else if (key == "购买命令") { for (int id = 1; id < 33; id++) Store.WeaponBuyCommand[id, template.Index] = value; }
-            else if (key == "静止动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.KnifeAnim[id, template.Index, WpnConst.KnifeAnimIdle] = v; }
-            else if (key == "轻击动作1") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.KnifeAnim[id, template.Index, WpnConst.KnifeAnimSlash1] = v; }
-            else if (key == "轻击动作2") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.KnifeAnim[id, template.Index, WpnConst.KnifeAnimSlash2] = v; }
-            else if (key == "掏出动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.KnifeAnim[id, template.Index, WpnConst.KnifeAnimDraw] = v; }
-            else if (key == "重击动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.KnifeAnim[id, template.Index, WpnConst.KnifeAnimStab] = v; }
-            else if (key == "重击未击中动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.KnifeAnim[id, template.Index, WpnConst.KnifeAnimStabMiss] = v; }
-            else if (key == "轻击动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.KnifeAnim[id, template.Index, WpnConst.KnifeAnimMidSlash] = v; }
-            else if (key == "轻击未击中动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.KnifeAnim[id, template.Index, WpnConst.KnifeAnimMidSlashMiss] = v; }
-            else if (key == "轻击开始动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.KnifeAnim[id, template.Index, WpnConst.KnifeAnimSlashBegin] = v; }
-            else if (key == "重击开始动作") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.KnifeAnim[id, template.Index, WpnConst.KnifeAnimStabBegin] = v; }
+            else if (key == "击墙声音大小") { float v = ToAttenuation(value, EngineConst.AttnNorm); Store.Config[template.Index].KnifeSoundVolume[0] = v; }
+            else if (key == "击空声音大小") { float v = ToAttenuation(value, EngineConst.AttnNorm); Store.Config[template.Index].KnifeSoundVolume[1] = v; }
+            else if (key == "重击声音大小") { float v = ToAttenuation(value, EngineConst.AttnNorm); Store.Config[template.Index].KnifeSoundVolume[2] = v; }
+            else if (key == "轻击声音1大小") { float v = ToAttenuation(value, EngineConst.AttnNorm); Store.Config[template.Index].KnifeSoundVolume[3] = v; }
+            else if (key == "轻击声音2大小") { float v = ToAttenuation(value, EngineConst.AttnNorm); Store.Config[template.Index].KnifeSoundVolume[4] = v; }
+            else if (key == "购买命令") { Store.Config[template.Index].BuyCommand = value; }
+            else if (key == "静止动作") { int v = ToInt(value); Store.Config[template.Index].KnifeAnim[WpnConst.KnifeAnimIdle] = v; }
+            else if (key == "轻击动作1") { int v = ToInt(value); Store.Config[template.Index].KnifeAnim[WpnConst.KnifeAnimSlash1] = v; }
+            else if (key == "轻击动作2") { int v = ToInt(value); Store.Config[template.Index].KnifeAnim[WpnConst.KnifeAnimSlash2] = v; }
+            else if (key == "掏出动作") { int v = ToInt(value); Store.Config[template.Index].KnifeAnim[WpnConst.KnifeAnimDraw] = v; }
+            else if (key == "重击动作") { int v = ToInt(value); Store.Config[template.Index].KnifeAnim[WpnConst.KnifeAnimStab] = v; }
+            else if (key == "重击未击中动作") { int v = ToInt(value); Store.Config[template.Index].KnifeAnim[WpnConst.KnifeAnimStabMiss] = v; }
+            else if (key == "轻击动作") { int v = ToInt(value); Store.Config[template.Index].KnifeAnim[WpnConst.KnifeAnimMidSlash] = v; }
+            else if (key == "轻击未击中动作") { int v = ToInt(value); Store.Config[template.Index].KnifeAnim[WpnConst.KnifeAnimMidSlashMiss] = v; }
+            else if (key == "轻击开始动作") { int v = ToInt(value); Store.Config[template.Index].KnifeAnim[WpnConst.KnifeAnimSlashBegin] = v; }
+            else if (key == "重击开始动作") { int v = ToInt(value); Store.Config[template.Index].KnifeAnim[WpnConst.KnifeAnimStabBegin] = v; }
 
             NotifyLoadFiles(WpnConst.SlotKnife, template.Index, key, value);
         }
@@ -460,44 +453,44 @@ public static unsafe class ConfigLoad
         foreach (var (key, value) in template.Entries)
         {
 
-            if (key == "掏出时间") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponDrawTime[id, template.Index] = v; }
-            else if (key == "爆炸时间") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.GrenadeData[id, template.Index, 1] = v; }
-            else if (key == "爆炸范围") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.GrenadeData[id, template.Index, 2] = v; }
-            else if (key == "伤害倍数") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponDamage[id, template.Index] = v; }
-            else if (key == "行走速度") { float v = ToFloat(value); for (int id = 1; id < 33; id++) Store.WeaponMaxSpeed[id, template.Index] = v; }
-            else if (key == "价格") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponCost[id, template.Index] = v; }
-            else if (key == "队伍") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponTeam[id, template.Index] = v; }
-            else if (key == "HUD菜单") { for (int id = 1; id < 33; id++) Store.WeaponList[id, template.Index] = value; }
-            else if (key == "杀敌SPR") { for (int id = 1; id < 33; id++) Store.WeaponSpr[id, template.Index] = value; }
-            else if (key == "W模型子模型序号") { int v = ToInt(value); for (int id = 1; id < 33; id++) Store.WeaponWModelBody[id, template.Index] = v; }
+            if (key == "掏出时间") { float v = ToFloat(value); Store.Config[template.Index].DrawTime = v; }
+            else if (key == "爆炸时间") { float v = ToFloat(value); Store.Config[template.Index].GrenadeData[1] = v; }
+            else if (key == "爆炸范围") { float v = ToFloat(value); Store.Config[template.Index].GrenadeData[2] = v; }
+            else if (key == "伤害倍数") { float v = ToFloat(value); Store.Config[template.Index].Damage = v; }
+            else if (key == "行走速度") { float v = ToFloat(value); Store.Config[template.Index].MaxSpeed = v; }
+            else if (key == "价格") { int v = ToInt(value); Store.Config[template.Index].Cost = v; }
+            else if (key == "队伍") { int v = ToInt(value); Store.Config[template.Index].Team = v; }
+            else if (key == "HUD菜单") { Store.Config[template.Index].List = value; }
+            else if (key == "杀敌SPR") { Store.Config[template.Index].Spr = value; }
+            else if (key == "W模型子模型序号") { int v = ToInt(value); Store.Config[template.Index].WModelBody = v; }
             else if (key == "P模型")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponPModel[id, template.Index] = value;
+                Store.Config[template.Index].PModel = value;
                 if (value.Length > 0) Eng.PrecacheModel(value);
             }
             else if (key == "V模型")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponVModel[id, template.Index] = value;
+                Store.Config[template.Index].VModel = value;
                 if (value.Length > 0) Eng.PrecacheModel(value);
             }
             else if (key == "W模型")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponWModel[id, template.Index] = value;
+                Store.Config[template.Index].WModel = value;
                 if (value.Length > 0) Eng.PrecacheModel(value);
             }
             else if (key == "爆炸SPR")
             {
                 int sprId = 0;
                 if (value.Length > 0) sprId = Eng.PrecacheModel(value);
-                for (int id = 1; id < 33; id++) Store.GrenadeSprId[id, template.Index] = sprId;
+                Store.Config[template.Index].GrenadeSprId = sprId;
             }
             else if (key == "爆炸声音")
             {
-                for (int id = 1; id < 33; id++) Store.WeaponSound1[id, template.Index] = value;
+                Store.Config[template.Index].Sound1 = value;
                 if (value.Length > 0) Eng.PrecacheSound(value);
             }
-            else if (key == "爆炸声音大小") { float v = ToAttenuation(value, 0.25f); for (int id = 1; id < 33; id++) Store.WeaponFireSoundVolume[id, template.Index] = v; }
-            else if (key == "购买命令") { for (int id = 1; id < 33; id++) Store.WeaponBuyCommand[id, template.Index] = value; }
+            else if (key == "爆炸声音大小") { float v = ToAttenuation(value, 0.25f); Store.Config[template.Index].FireSoundVolume = v; }
+            else if (key == "购买命令") { Store.Config[template.Index].BuyCommand = value; }
 
             NotifyLoadFiles(WpnConst.SlotGrenade, template.Index, key, value);
         }

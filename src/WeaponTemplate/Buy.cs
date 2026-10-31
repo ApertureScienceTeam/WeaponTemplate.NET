@@ -11,19 +11,19 @@ public static unsafe class Buy
         if (!Eng.IsAlive(id)) return;
         if (!Eng.IsBot(id)) return;
 
-        if (!Store.BotBuyWeapon[id]) return;
+        if (!Store.Player(id).BotBuyWeapon) return;
 
         var pPlayer = Eng.EntOfIndex(id);
         if (pPlayer == null) return;
 
-        Store.BotMoney[id] += Eng.GetPDataInt(pPlayer, 115);
-        if (Store.BotMoney[id] > Store.MaxMoney) Store.BotMoney[id] = Store.MaxMoney;
+        Store.Player(id).BotMoney += Eng.GetPDataInt(pPlayer, 115);
+        if (Store.Player(id).BotMoney > Store.MaxMoney) Store.Player(id).BotMoney = Store.MaxMoney;
         Core.SetUserMoney(id, 0);
 
         int result = NativeFunctionRegister.Execute_WpnBotBuyWeapon(id);
         if (result == WpnConst.WPN_SUPERCEDE)
         {
-            Store.BotBuyWeapon[id] = false;
+            Store.Player(id).BotBuyWeapon = false;
             return;
         }
 
@@ -39,14 +39,14 @@ public static unsafe class Buy
             if (Eng.IsValid(entity)) weaponBySlot[i] = Store.GetWeaponType(entity);
         }
 
-        if (Store.BotMoney[id] >= 1000)
+        if (Store.Player(id).BotMoney >= 1000)
         {
             specialWeapon1 = WpnConst.SwVesthelm;
             specialWeapon0 = 0;
             int postResult = NativeFunctionRegister.Execute_WpnBotBuyWeaponPost(id, specialWeapon0, specialWeapon1);
             if (postResult != WpnConst.WPN_SUPERCEDE && Core.CheckBuy(id))
             {
-                Store.BotMoney[id] -= 1000;
+                Store.Player(id).BotMoney -= 1000;
                 pPlayer->v.armorvalue = 100.0f;
                 Eng.SetPDataInt(pPlayer, 112, 2);
                 Eng.MessageBegin(EngineConst.MsgOne, Eng.UserMsgId("ArmorType"), null, pPlayer);
@@ -56,7 +56,7 @@ public static unsafe class Buy
             }
         }
 
-        if (Store.BotMoney[id] >= 200 && Eng.GetPDataInt(pPlayer, 114) == 2)
+        if (Store.Player(id).BotMoney >= 200 && Eng.GetPDataInt(pPlayer, 114) == 2)
         {
             specialWeapon1 = WpnConst.SwDefuser;
             specialWeapon0 = 0;
@@ -79,18 +79,18 @@ public static unsafe class Buy
                     Eng.WriteByte(160);
                     Eng.WriteByte(0);
                     Eng.MessageEnd();
-                    Store.BotMoney[id] -= 200;
+                    Store.Player(id).BotMoney -= 200;
                     Eng.EmitSound(pPlayer, EngineConst.ChanAuto, "items/gunpickup2.wav", EngineConst.VolNorm, EngineConst.AttnNorm, 0, EngineConst.PitchNorm);
                 }
             }
         }
 
         // 主/副/刀/雷 四个槽位的模板武器选择
-        var slotCandidates = new int[4, WpnConst.MaxWeapon];
+        var slotCandidates = new int[4, Store.WeaponAmount + 1];
         var slotCount = new int[4];
         for (int j = 0; j < 4; j++)
         {
-            for (int i = 1; i < WpnConst.MaxWeapon; i++)
+            for (int i = 1; i <= Store.WeaponAmount + 1; i++)
             {
                 if (i > Store.WeaponAmount)
                 {
@@ -104,16 +104,16 @@ public static unsafe class Buy
                         if (postResult != WpnConst.WPN_SUPERCEDE)
                         {
                             Core.GiveWeaponByTemplate(id, wpnId);
-                            Store.BotMoney[id] -= Store.WeaponCost[id, wpnId];
-                            if (j < 2) Core.SetUserBpAmmo(id, Store.WeaponId[id, wpnId], Store.WeaponAmmo[id, wpnId]);
+                            Store.Player(id).BotMoney -= Store.Weapon(id, wpnId).Cost;
+                            if (j < 2) Core.SetUserBpAmmo(id, Store.Weapon(id, wpnId).Id, Store.Weapon(id, wpnId).Ammo);
                         }
                     }
                     break;
                 }
-                if (Store.WeaponBuyCommand[id, i] == "empty") continue;
+                if (Store.Weapon(id, i).BuyCommand == "empty") continue;
                 if (!Core.CheckBuy(id)) continue;
-                if (Eng.GetPDataInt(pPlayer, 114) != Store.WeaponTeam[id, i] && Store.WeaponTeam[id, i] != 0) continue;
-                if (Store.BotMoney[id] < Store.WeaponCost[id, i]) continue;
+                if (Eng.GetPDataInt(pPlayer, 114) != Store.Weapon(id, i).Team && Store.Weapon(id, i).Team != 0) continue;
+                if (Store.Player(id).BotMoney < Store.Weapon(id, i).Cost) continue;
                 if ((j == 0 && weaponBySlot[0] != 0) || (j == 1 && weaponBySlot[1] != 0)) continue;
                 if (Core.GetWeaponSlot(id, i, j + 1))
                 {
@@ -126,7 +126,7 @@ public static unsafe class Buy
         // 手雷/烟雾/闪光
         for (int i = 0; i < 3; i++)
         {
-            if (Store.BotMoney[id] >= grenadeCost[i])
+            if (Store.Player(id).BotMoney >= grenadeCost[i])
             {
                 if ((pPlayer->v.weapons & (1 << grenadeId[i])) != 0) continue;
                 if (!Core.CheckBuy(id)) continue;
@@ -137,16 +137,16 @@ public static unsafe class Buy
                 if (postResult != WpnConst.WPN_SUPERCEDE)
                 {
                     Core.GiveWeapon(id, grenadeName[i], 0);
-                    Store.BotMoney[id] -= grenadeCost[i];
+                    Store.Player(id).BotMoney -= grenadeCost[i];
                 }
             }
         }
 
         if (slotCount[0] == 0 && slotCount[1] == 0 && weaponBySlot[0] == 0 && weaponBySlot[1] == 0)
         {
-            Core.SetUserMoney(id, Store.BotMoney[id]);
-            Store.BotMoney[id] = 0;
+            Core.SetUserMoney(id, Store.Player(id).BotMoney);
+            Store.Player(id).BotMoney = 0;
         }
-        Store.BotBuyWeapon[id] = false;
+        Store.Player(id).BotBuyWeapon = false;
     }
 }

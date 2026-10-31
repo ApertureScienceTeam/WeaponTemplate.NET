@@ -300,28 +300,28 @@ public static unsafe class Core
 
         // 开镜时取消V模型
         if (GetUserZoom(id) == 2 || GetUserZoom(id) == 3) Eng.SetViewModel(pPlayer, "");
-        else Eng.SetViewModel(pPlayer, Store.WeaponVModel[id, i]);
-        Eng.SetWeaponModel(pPlayer, Store.WeaponPModel[id, i]);
+        else Eng.SetViewModel(pPlayer, Store.Weapon(id, i).VModel);
+        Eng.SetWeaponModel(pPlayer, Store.Weapon(id, i).PModel);
 
         // 无弹夹子弹的武器
-        if (Store.WeaponClip[id, i] == 0 && Store.WeaponId[id, i] != EngineConst.CswHegrenade && Store.WeaponId[id, i] != EngineConst.CswKnife)
+        if (Store.Weapon(id, i).Clip == 0 && Store.Weapon(id, i).Id != EngineConst.CswHegrenade && Store.Weapon(id, i).Id != EngineConst.CswKnife)
         {
             int clip = Eng.GetPDataInt(pEntity, 51);
-            SetUserBpAmmo(id, Store.WeaponId[id, i], clip);
+            SetUserBpAmmo(id, Store.Weapon(id, i).Id, clip);
             Eng.MessageBegin(EngineConst.MsgOne, Eng.UserMsgId("CurWeapon"), null, pPlayer);
             Eng.WriteByte(1);
-            Eng.WriteByte(Store.WeaponId[id, i]);
+            Eng.WriteByte(Store.Weapon(id, i).Id);
             Eng.WriteByte(0xFF); // Pawn write_byte(-1) 的单字节效果
             Eng.MessageEnd();
             Eng.MessageBegin(EngineConst.MsgOne, Eng.UserMsgId("AmmoX"), null, pPlayer);
-            Eng.WriteByte(Store.GameWeaponAmmoId[Store.WeaponId[id, i]]);
+            Eng.WriteByte(GameTables.GameWeaponAmmoId[Store.Weapon(id, i).Id]);
             Eng.WriteByte(clip);
             Eng.MessageEnd();
         }
 
         // 机瞄V模型
-        if (Store.WeaponSight[id, i] != 0 && Store.SightMode[id] == WpnConst.Open)
-            Eng.SetViewModel(pPlayer, Store.WeaponVModelS[id, i]);
+        if (Store.Weapon(id, i).Sight != 0 && Store.Player(id).SightMode == WpnConst.Open)
+            Eng.SetViewModel(pPlayer, Store.Weapon(id, i).SightModel);
     }
 
     // public Event_Round_Start(HLTV)
@@ -333,11 +333,7 @@ public static unsafe class Core
         if (Store.RoundRestart)
         {
             Store.RoundRestart = false;
-            for (int id = 1; id < 33; id++)
-            {
-                for (int i = 1; i < WpnConst.MaxWeapon; i++) Store.CurWeaponBPAmmo[id, i] = 0;
-                for (int i = 0; i < 32; i++) Store.GameCurWeaponBPAmmo[id, i] = 0;
-            }
+            foreach (var player in Store.Players.Values) player.ClearAmmo();
         }
     }
 
@@ -351,13 +347,13 @@ public static unsafe class Core
         string listName;
         if (i != 0)
         {
-            wpnId = Store.WeaponId[id, i];
-            listName = $"weapon_{Store.WeaponList[id, i]}";
+            wpnId = Store.Weapon(id, i).Id;
+            listName = $"weapon_{Store.Weapon(id, i).List}";
         }
         else
         {
             wpnId = Eng.GetPDataInt(entity, 43);
-            listName = wpnId >= 0 && wpnId < Store.GameWeaponClassName.Length ? Store.GameWeaponClassName[wpnId] : "";
+            listName = wpnId >= 0 && wpnId < GameTables.GameWeaponClassName.Length ? GameTables.GameWeaponClassName[wpnId] : "";
         }
 
         var pPlayer = Eng.EntOfIndex(id);
@@ -371,18 +367,18 @@ public static unsafe class Core
         }
         else if (wpnId == EngineConst.CswHegrenade)
         {
-            Eng.WriteByte(Store.GameWeaponAmmoId[wpnId]);
+            Eng.WriteByte(GameTables.GameWeaponAmmoId[wpnId]);
             Eng.WriteByte(Store.GameWeaponMaxBpammo[wpnId]);
         }
         else
         {
-            Eng.WriteByte(Store.GameWeaponAmmoId[wpnId]);
-            Eng.WriteByte(i != 0 ? Store.WeaponAmmo[id, i] : Store.GameWeaponMaxBpammo[wpnId]);
+            Eng.WriteByte(GameTables.GameWeaponAmmoId[wpnId]);
+            Eng.WriteByte(i != 0 ? Store.Weapon(id, i).Ammo : Store.GameWeaponMaxBpammo[wpnId]);
         }
         Eng.WriteByte(0xFF); // -1
         Eng.WriteByte(0xFF); // -1
-        Eng.WriteByte(Store.GameWeaponPosition[wpnId]);
-        Eng.WriteByte(Store.GameWeaponSlot[wpnId]);
+        Eng.WriteByte(GameTables.GameWeaponPosition[wpnId]);
+        Eng.WriteByte(GameTables.GameWeaponSlot[wpnId]);
         Eng.WriteByte(wpnId);
         Eng.MessageEnd();
     }
@@ -390,15 +386,15 @@ public static unsafe class Core
     // public CheckBuy(id)
     public static bool CheckBuy(int id)
     {
-        if (Store.BlockBuy[id] == WpnConst.BuyCannot) return false;
-        if (Store.BlockBuy[id] == WpnConst.BuyEverywhere && Eng.IsAlive(id)) return true;
+        if (Store.Player(id).BlockBuy == WpnConst.BuyCannot) return false;
+        if (Store.Player(id).BlockBuy == WpnConst.BuyEverywhere && Eng.IsAlive(id)) return true;
         if (!Eng.IsAlive(id)) return false;
 
         var p = Eng.EntOfIndex(id);
         if (p == null) return false;
 
         if ((Eng.GetPDataInt(p, 235) & (1 << 0)) == 0 && !Eng.IsBot(id)) return false;
-        if (Eng.IsBot(id) && !Store.BotBuyWeapon[id]) return false;
+        if (Eng.IsBot(id) && !Store.Player(id).BotBuyWeapon) return false;
 
         if (Eng.GameTime > Store.DisableBuyTime)
         {
@@ -518,23 +514,23 @@ public static unsafe class Core
         var pPlayer = Eng.EntOfIndex(id);
         if (pPlayer == null) return 0;
         var curEntity = Eng.GetPDataCbase(pPlayer, 373);
-        var entity = GiveWeapon(id, Store.GameWeaponClassName[Store.WeaponId[id, i]], i);
+        var entity = GiveWeapon(id, GameTables.GameWeaponClassName[Store.Weapon(id, i).Id], i);
         if (!Eng.IsValid(entity))
         {
-            MF.Log($"[diag] give abort: GiveWeapon returned invalid (tpl={i} cls={Store.GameWeaponClassName[Store.WeaponId[id, i]]})");
+            MF.Log($"[diag] give abort: GiveWeapon returned invalid (tpl={i} cls={GameTables.GameWeaponClassName[Store.Weapon(id, i).Id]})");
             return 0;
         }
 
-        int csw = Store.WeaponId[id, i];
+        int csw = Store.Weapon(id, i).Id;
 
         // 是武器
         if (csw != EngineConst.CswKnife && csw != EngineConst.CswHegrenade)
         {
             // 两种设置clip，CurWeapon那里会发送消息隐藏弹夹
-            if (Store.WeaponClip[id, i] != 0) Eng.SetPDataInt(entity, 51, Store.WeaponClip[id, i]);
+            if (Store.Weapon(id, i).Clip != 0) Eng.SetPDataInt(entity, 51, Store.Weapon(id, i).Clip);
             else
             {
-                Eng.SetPDataInt(entity, 51, Store.WeaponAmmo[id, i]);
+                Eng.SetPDataInt(entity, 51, Store.Weapon(id, i).Ammo);
                 SetUserBpAmmo(id, csw, Eng.GetPDataInt(entity, 51));
             }
         }
@@ -543,19 +539,19 @@ public static unsafe class Core
         // 如果给的是刀子，且当前武器就是刀子
         if (Eng.GetPDataInt(entity, 43) == EngineConst.CswKnife && Eng.IsValid(curEntity) && Eng.GetPDataInt(curEntity, 43) == EngineConst.CswKnife)
         {
-            PlayAnim(id, Store.KnifeAnim[id, i, WpnConst.KnifeAnimDraw]);
-            Eng.EmitSound(pPlayer, EngineConst.ChanWeapon, Store.WeaponSound1[id, i], EngineConst.VolNorm, EngineConst.AttnNorm, 0, EngineConst.PitchNorm);
-            Eng.SetPDataFloat(pPlayer, 83, Store.WeaponDrawTime[id, i]);
-            Eng.SetViewModel(pPlayer, Store.WeaponVModel[id, i]);
-            Eng.SetWeaponModel(pPlayer, Store.WeaponPModel[id, i]);
+            PlayAnim(id, Store.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimDraw]);
+            Eng.EmitSound(pPlayer, EngineConst.ChanWeapon, Store.Weapon(id, i).Sound1, EngineConst.VolNorm, EngineConst.AttnNorm, 0, EngineConst.PitchNorm);
+            Eng.SetPDataFloat(pPlayer, 83, Store.Weapon(id, i).DrawTime);
+            Eng.SetViewModel(pPlayer, Store.Weapon(id, i).VModel);
+            Eng.SetWeaponModel(pPlayer, Store.Weapon(id, i).PModel);
         }
 
         // 给的是手雷，第二个判断没看懂(原注释)
         if (Eng.GetPDataInt(entity, 43) == EngineConst.CswHegrenade && curEntity != Eng.GetPDataCbase(pPlayer, 373))
         {
-            Eng.SetViewModel(pPlayer, Store.WeaponVModel[id, i]);
-            Eng.SetWeaponModel(pPlayer, Store.WeaponPModel[id, i]);
-            Eng.SetPDataFloat(entity, 48, Store.WeaponDrawTime[id, i]);
+            Eng.SetViewModel(pPlayer, Store.Weapon(id, i).VModel);
+            Eng.SetWeaponModel(pPlayer, Store.Weapon(id, i).PModel);
+            Eng.SetPDataFloat(entity, 48, Store.Weapon(id, i).DrawTime);
         }
 
         // 给的同种类型（CSW）的不同序号的武器的时候，debug处理
@@ -577,28 +573,28 @@ public static unsafe class Core
     // public GivePriAmmo(id, iEntity, WpnId, iMode, iNative, iGiveAmount)
     public static bool GivePriAmmo(int id, edict_t* entity, int wpnId, int mode, int nativeBuy, int giveAmount)
     {
-        Store.BuyingAmmo[id] = true;
+        Store.Player(id).BuyingAmmo = true;
         var pPlayer = Eng.EntOfIndex(id);
         if (pPlayer == null) return false;
 
         int money = Eng.GetPDataInt(pPlayer, 115);
         int weapon = Eng.GetPDataInt(entity, 43);
-        int ammo = wpnId != 0 ? Store.CurWeaponBPAmmo[id, wpnId] : Store.GameCurWeaponBPAmmo[id, weapon];
-        int maxAmmo = wpnId != 0 ? Store.WeaponAmmo[id, wpnId] : Store.GameWeaponMaxBpammo[weapon];
+        int ammo = wpnId != 0 ? Store.Player(id).BPAmmo[wpnId] : Store.Player(id).GameBpAmmo[weapon];
+        int maxAmmo = wpnId != 0 ? Store.Weapon(id, wpnId).Ammo : Store.GameWeaponMaxBpammo[weapon];
         int amount, cost;
 
         for (int i = 0; i < WpnConst.MaxPrim; i++)
         {
             if (mode == 0)
             {
-                amount = wpnId != 0 ? Math.Min(Store.WeaponClip[id, wpnId], 30) : Store.PrimAmount[i];
+                amount = wpnId != 0 ? Math.Min(Store.Weapon(id, wpnId).Clip, 30) : GameTables.PrimAmount[i];
             }
             else amount = 1;
             if (giveAmount != 0) amount = giveAmount;
-            cost = wpnId != 0 ? Store.WeaponAmmoCost[id, wpnId] : Store.PrimCost[i];
+            cost = wpnId != 0 ? Store.Weapon(id, wpnId).AmmoCost : GameTables.PrimCost[i];
             if (nativeBuy != 0) cost = 0;
 
-            if (weapon == Store.PrimId[i] && money >= cost)
+            if (weapon == GameTables.PrimId[i] && money >= cost)
             {
                 if (mode != 0 && Eng.GetPDataInt(entity, 51) >= maxAmmo && wpnId != 0) return false;
                 if (mode == 0 && ammo >= maxAmmo && wpnId != 0) return false;
@@ -606,7 +602,7 @@ public static unsafe class Core
 
                 if (ammo + amount > maxAmmo) amount = maxAmmo - ammo;
                 Eng.MessageBegin(EngineConst.MsgOne, Eng.UserMsgId("AmmoPickup"), null, pPlayer);
-                Eng.WriteByte(Store.GameWeaponAmmoId[weapon]);
+                Eng.WriteByte(GameTables.GameWeaponAmmoId[weapon]);
                 Eng.WriteByte(amount);
                 Eng.MessageEnd();
                 Eng.EmitSound(entity, EngineConst.ChanWeapon, "items/9mmclip1.wav", EngineConst.VolNorm, EngineConst.AttnNorm, 1 << 0, EngineConst.PitchNorm);
@@ -614,8 +610,8 @@ public static unsafe class Core
                 money -= cost;
                 if (mode != 0) Eng.SetPDataInt(entity, 51, ammo);
                 if (Eng.GetPDataCbase(pPlayer, 373) == entity) SetUserBpAmmo(id, weapon, ammo);
-                if (wpnId == 0) Store.GameCurWeaponBPAmmo[id, weapon] = ammo;
-                else Store.CurWeaponBPAmmo[id, wpnId] = ammo;
+                if (wpnId == 0) Store.Player(id).GameBpAmmo[weapon] = ammo;
+                else Store.Player(id).BPAmmo[wpnId] = ammo;
                 SetUserMoney(id, money);
                 return true;
             }
@@ -626,28 +622,28 @@ public static unsafe class Core
     // public GiveSecAmmo(id, iEntity, WpnId, iMode, iNative, iGiveAmount)
     public static bool GiveSecAmmo(int id, edict_t* entity, int wpnId, int mode, int nativeBuy, int giveAmount)
     {
-        Store.BuyingAmmo[id] = true;
+        Store.Player(id).BuyingAmmo = true;
         var pPlayer = Eng.EntOfIndex(id);
         if (pPlayer == null) return false;
 
         int money = Eng.GetPDataInt(pPlayer, 115);
         int weapon = Eng.GetPDataInt(entity, 43);
-        int ammo = wpnId != 0 ? Store.CurWeaponBPAmmo[id, wpnId] : Store.GameCurWeaponBPAmmo[id, weapon];
-        int maxAmmo = wpnId != 0 ? Store.WeaponAmmo[id, wpnId] : Store.GameWeaponMaxBpammo[weapon];
+        int ammo = wpnId != 0 ? Store.Player(id).BPAmmo[wpnId] : Store.Player(id).GameBpAmmo[weapon];
+        int maxAmmo = wpnId != 0 ? Store.Weapon(id, wpnId).Ammo : Store.GameWeaponMaxBpammo[weapon];
         int amount, cost;
 
         for (int i = 0; i < WpnConst.MaxSec; i++)
         {
             if (mode == 0)
             {
-                amount = wpnId != 0 ? Math.Min(Store.WeaponClip[id, wpnId], 30) : Store.SecAmount[i];
+                amount = wpnId != 0 ? Math.Min(Store.Weapon(id, wpnId).Clip, 30) : GameTables.SecAmount[i];
             }
             else amount = 1;
             if (giveAmount != 0) amount = giveAmount;
-            cost = wpnId != 0 ? Store.WeaponAmmoCost[id, wpnId] : Store.SecondCost[i];
+            cost = wpnId != 0 ? Store.Weapon(id, wpnId).AmmoCost : GameTables.SecondCost[i];
             if (nativeBuy != 0) cost = 0;
 
-            if (weapon == Store.SecondId[i] && money >= cost)
+            if (weapon == GameTables.SecondId[i] && money >= cost)
             {
                 if (mode != 0 && Eng.GetPDataInt(entity, 51) >= maxAmmo && wpnId != 0) return false;
                 if (mode == 0 && ammo >= maxAmmo && wpnId != 0) return false;
@@ -655,7 +651,7 @@ public static unsafe class Core
 
                 if (ammo + amount > maxAmmo) amount = maxAmmo - ammo;
                 Eng.MessageBegin(EngineConst.MsgOne, Eng.UserMsgId("AmmoPickup"), null, pPlayer);
-                Eng.WriteByte(Store.GameWeaponAmmoId[weapon]);
+                Eng.WriteByte(GameTables.GameWeaponAmmoId[weapon]);
                 Eng.WriteByte(amount);
                 Eng.MessageEnd();
                 Eng.EmitSound(entity, EngineConst.ChanWeapon, "items/9mmclip1.wav", EngineConst.VolNorm, EngineConst.AttnNorm, 1 << 0, EngineConst.PitchNorm);
@@ -663,8 +659,8 @@ public static unsafe class Core
                 money -= cost;
                 if (mode != 0) Eng.SetPDataInt(entity, 51, ammo);
                 if (Eng.GetPDataCbase(pPlayer, 373) == entity) SetUserBpAmmo(id, weapon, ammo);
-                if (wpnId == 0) Store.GameCurWeaponBPAmmo[id, weapon] = ammo;
-                else Store.CurWeaponBPAmmo[id, wpnId] = ammo;
+                if (wpnId == 0) Store.Player(id).GameBpAmmo[weapon] = ammo;
+                else Store.Player(id).BPAmmo[wpnId] = ammo;
                 SetUserMoney(id, money);
                 return true;
             }
@@ -680,9 +676,9 @@ public static unsafe class Core
 
         for (int i = 0; i < WpnConst.MaxPrim; i++)
         {
-            if (Eng.GetPDataInt(entity, 43) == Store.PrimId[i])
+            if (Eng.GetPDataInt(entity, 43) == GameTables.PrimId[i])
             {
-                if (Store.WeaponClip[id, wpnId] == 0)
+                if (Store.Weapon(id, wpnId).Clip == 0)
                 {
                     if (wpnId != 0)
                     {
@@ -704,9 +700,9 @@ public static unsafe class Core
         }
         for (int i = 0; i < WpnConst.MaxSec; i++)
         {
-            if (Eng.GetPDataInt(entity, 43) == Store.SecondId[i])
+            if (Eng.GetPDataInt(entity, 43) == GameTables.SecondId[i])
             {
-                if (Store.WeaponClip[id, wpnId] == 0)
+                if (Store.Weapon(id, wpnId).Clip == 0)
                 {
                     if (wpnId != 0)
                     {
@@ -741,11 +737,11 @@ public static unsafe class Core
             case 0:
             {
                 // 开始换弹
-                PlayAnim(id, Store.WeaponAnim[id, i, WpnConst.AnimStartReload]);
+                PlayAnim(id, Store.Weapon(id, i).Anim[WpnConst.AnimStartReload]);
                 Eng.SetPDataInt(entity, 55, 1);
-                Eng.SetPDataFloat(id, 83, Store.WeaponReloadTime[id, i, 1]);
-                Eng.SetPDataFloat(entity, 46, Store.WeaponReloadTime[id, i, 1]);
-                Eng.SetPDataFloat(entity, 48, Store.WeaponReloadTime[id, i, 1]);
+                Eng.SetPDataFloat(id, 83, Store.Weapon(id, i).ReloadTime[1]);
+                Eng.SetPDataFloat(entity, 46, Store.Weapon(id, i).ReloadTime[1]);
+                Eng.SetPDataFloat(entity, 48, Store.Weapon(id, i).ReloadTime[1]);
                 return;
             }
             case 1:
@@ -754,10 +750,10 @@ public static unsafe class Core
 
                 // 装弹动作
                 Eng.SetPDataInt(entity, 55, 2);
-                PlayAnim(id, Store.WeaponAnim[id, i, WpnConst.AnimInsert]);
-                Eng.SetPDataFloat(entity, 46, Store.WeaponReloadTime[id, i, 0]);
-                Eng.SetPDataFloat(entity, 48, Store.WeaponReloadTime[id, i, 0]);
-                Eng.SetPDataFloat(id, 83, Store.WeaponReloadTime[id, i, 0]);
+                PlayAnim(id, Store.Weapon(id, i).Anim[WpnConst.AnimInsert]);
+                Eng.SetPDataFloat(entity, 46, Store.Weapon(id, i).ReloadTime[0]);
+                Eng.SetPDataFloat(entity, 48, Store.Weapon(id, i).ReloadTime[0]);
+                Eng.SetPDataFloat(id, 83, Store.Weapon(id, i).ReloadTime[0]);
                 break;
             }
             default:
@@ -765,7 +761,7 @@ public static unsafe class Core
                 // 子弹+1
                 Eng.SetPDataInt(entity, 51, clip + 1);
                 SetUserBpAmmo(id, weaponId, bpAmmo - 1);
-                Store.CurWeaponBPAmmo[id, i] = bpAmmo - 1;
+                Store.Player(id).BPAmmo[i] = bpAmmo - 1;
                 Eng.SetPDataInt(entity, 55, 1);
                 break;
             }
@@ -775,10 +771,10 @@ public static unsafe class Core
     // stock GetWeaponSlot(id, WpnID, slot)
     public static bool GetWeaponSlot(int id, int wpnId, int slot)
     {
-        if (slot == 1) for (int i = 0; i < WpnConst.MaxPrim; i++) if (Store.WeaponId[id, wpnId] == Store.PrimId[i]) return true;
-        if (slot == 2) for (int i = 0; i < WpnConst.MaxSec; i++) if (Store.WeaponId[id, wpnId] == Store.SecondId[i]) return true;
-        if (slot == 3) if (Store.WeaponId[id, wpnId] == EngineConst.CswKnife) return true;
-        if (slot == 4) if (Store.WeaponId[id, wpnId] == EngineConst.CswHegrenade) return true;
+        if (slot == 1) for (int i = 0; i < WpnConst.MaxPrim; i++) if (Store.Weapon(id, wpnId).Id == GameTables.PrimId[i]) return true;
+        if (slot == 2) for (int i = 0; i < WpnConst.MaxSec; i++) if (Store.Weapon(id, wpnId).Id == GameTables.SecondId[i]) return true;
+        if (slot == 3) if (Store.Weapon(id, wpnId).Id == EngineConst.CswKnife) return true;
+        if (slot == 4) if (Store.Weapon(id, wpnId).Id == EngineConst.CswHegrenade) return true;
         return false;
     }
 
@@ -793,20 +789,5 @@ public static unsafe class Core
     }
 
     // plugin_init 里的默认音量初始化
-    public static void ApplyDefaultSoundVolumes()
-    {
-        for (int i = 1; i <= Store.WeaponAmount; i++)
-        {
-            for (int id = 1; id < 33; id++)
-            {
-                if (Store.WeaponFireSoundVolume[id, i] == 0.0f)
-                {
-                    Store.WeaponFireSoundVolume[id, i] = Store.WeaponId[id, i] == EngineConst.CswHegrenade ? 0.25f : 0.35f;
-                }
-                if (Store.WeaponSilenceFireSoundVolume[id, i] == 0.0f) Store.WeaponSilenceFireSoundVolume[id, i] = EngineConst.AttnNorm;
-                for (int j = 0; j < 5; j++)
-                    if (Store.KnifeSoundVolume[id, i, j] == 0.0f) Store.KnifeSoundVolume[id, i, j] = EngineConst.AttnNorm;
-            }
-        }
-    }
+    public static void ApplyDefaultSoundVolumes() => Store.ApplyDefaultSoundVolumes();
 }

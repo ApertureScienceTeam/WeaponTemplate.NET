@@ -1,7 +1,28 @@
 <Solution>
+  <Folder Name="/Configs/">
+    <File Path="Game.targets" />
+    <File Path="Directory.Build.props" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/WeaponExtend/WeaponExtend.csproj" />
     <Project Path="src/WeaponTemplate/WeaponTemplate.csproj" />
     <Project Path="src/ZpNewWeapon/ZpNewWeapon.csproj" />
   </Folder>
+  <Project Path="MetaHook.exe">
+    <BuildType Project="Release" />
+    <Platform Project="x86" />
+    <Properties Name="DebuggerProjectSystem">
+      <Property Name="Arguments" Value="-game cstrike -windowed" />
+      <Property Name="AttachLaunchAction" Value="No" />
+      <Property Name="Environment" Value="默认值" />
+      <Property Name="Executable" Value="D:\SteamLibrary\steamapps\common\Half-Life\MetaHook.exe" />
+      <Property Name="IORedirection" Value="Auto" />
+      <Property Name="LaunchingEngine" Value="00000000-0000-0000-0000-000000000000" />
+      <Property Name="LaunchSQLEngine" Value="No" />
+      <Property Name="PortSupplier" Value="00000000-0000-0000-0000-000000000000" />
+      <Property Name="RemoteMachine" Value="DESKTOP-8P3G9EC" />
+      <Property Name="StartingDirectory" Value="D:\SteamLibrary\steamapps\common\Half-Life" />
+      <Property Name="UseLegacyDebugEngines" Value="No" />
+    </Properties>
+  </Project>
 </Solution>

@@ -7,8 +7,8 @@ namespace Module;
 // wpn_const.inc 原样翻译(中文注释保留),另附引擎/AMXX 侧用到的数值常量。
 public static class WpnConst
 {
-    /* 最大武器量 */
-    public const int MaxWeapon = 128;
+    /* 模板数量软上限:只做注册防呆,不参与任何数组尺寸 */
+    public const int MaxTemplateCount = 512;
 
     /* 事件返回值 */
     public const int WPN_IGNORED = 0;

@@ -17,7 +17,7 @@ public static unsafe partial class WeaponView
 
         var pPlayer = Engine.EntOfIndex(id);
         if (pPlayer == null) return;
-        var pEntity = Engine.GetPDataCbase(pPlayer, 373);
+        var pEntity = Engine.GetPDataCbase(pPlayer, CsOffsets.ActiveItem);
         if (!Engine.IsValid(pEntity)) return;
 
         int i = WeaponStore.GetWeaponType(pEntity);
@@ -31,7 +31,7 @@ public static unsafe partial class WeaponView
         // 无弹夹子弹的武器
         if (WeaponStore.Weapon(id, i).Clip == 0 && WeaponStore.Weapon(id, i).Id != EngineConst.CswHegrenade && WeaponStore.Weapon(id, i).Id != EngineConst.CswKnife)
         {
-            int clip = Engine.GetPDataInt(pEntity, 51);
+            int clip = Engine.GetPDataInt(pEntity, CsOffsets.ItemClip);
             PlayerStocks.SetUserBpAmmo(id, WeaponStore.Weapon(id, i).Id, clip);
             Engine.MessageBegin(EngineConst.MsgOne, Engine.UserMsgId("CurWeapon"), null, pPlayer);
             Engine.WriteByte(1);
@@ -96,7 +96,7 @@ public static unsafe partial class WeaponView
             {
                 if (GameTables.GameWeaponKillSpr[j].Length == 0) continue;
                 if (GameTables.GameWeaponKillSpr[j] != weapon) continue;
-                entityIndex = pPlayer == null ? 0 : Engine.IndexOf(Engine.GetPDataCbase(pPlayer, 373));
+                entityIndex = pPlayer == null ? 0 : Engine.IndexOf(Engine.GetPDataCbase(pPlayer, CsOffsets.ActiveItem));
             }
         }
         if (entityIndex <= 0)

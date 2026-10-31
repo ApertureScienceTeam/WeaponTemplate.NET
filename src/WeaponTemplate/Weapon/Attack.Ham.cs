@@ -12,7 +12,7 @@ public static unsafe partial class Attack
     {
         var entity = Engine.EntOfIndex(entityIndex);
         if (entity == null) return EngineConst.HamIgnored;
-        var pPlayer = Engine.GetPDataCbase(entity, 41);
+        var pPlayer = Engine.GetPDataCbase(entity, CsOffsets.ItemOwner);
         if (pPlayer == null) return EngineConst.HamIgnored;
         int id = Engine.IndexOf(pPlayer);
         int i = WeaponStore.GetWeaponType(entity);
@@ -48,13 +48,13 @@ public static unsafe partial class Attack
         int result = NativeFunctionRegister.Execute_WpnPrimaryPreAttack(entityIndex, id, i);
         if (result == WpnConst.WPN_SUPERCEDE) return EngineConst.HamSupercede;
 
-        if (Engine.GetPDataInt(entity, 55) != 0) Engine.SetPDataInt(entity, 55, 0);
+        if (Engine.GetPDataInt(entity, CsOffsets.ItemInSpecialReload) != 0) Engine.SetPDataInt(entity, CsOffsets.ItemInSpecialReload, 0);
         if (result == WpnConst.WPN_HANDLED)
         {
             // WPN_HANDLED:打断原版攻击并执行一次假攻击
-            if (Engine.GetPDataInt(entity, 51) <= 0) return EngineConst.HamIgnored;
+            if (Engine.GetPDataInt(entity, CsOffsets.ItemClip) <= 0) return EngineConst.HamIgnored;
 
-            bool silenced = (Engine.GetPDataInt(entity, 74) & (1 << 2)) != 0 || (Engine.GetPDataInt(entity, 74) & (1 << 0)) != 0;
+            bool silenced = (Engine.GetPDataInt(entity, CsOffsets.ItemWeaponState) & (1 << 2)) != 0 || (Engine.GetPDataInt(entity, CsOffsets.ItemWeaponState) & (1 << 0)) != 0;
 
             var push = new float[] { 0.0f, 0.0f, 0.0f };
             if (silenced)
@@ -74,20 +74,20 @@ public static unsafe partial class Attack
             if (PlayerStocks.GetUserZoom(id) != 1 || WeaponStore.Player(id).SightMode == WpnConst.Open)
             {
                 push[0] = -1.0f * WeaponStore.Weapon(id, i).AimRecoil;
-                Engine.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).AimSpeed);
-                Engine.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).AimSpeed);
+                Engine.SetPDataFloat(id, CsOffsets.NextAttack, WeaponStore.Weapon(id, i).AimSpeed);
+                Engine.SetPDataFloat(entity, CsOffsets.ItemNextPrimaryAttack, WeaponStore.Weapon(id, i).AimSpeed);
             }
             else if (PlayerStocks.GetUserZoom(id) == 1 && WeaponStore.Player(id).SightMode != WpnConst.Open)
             {
                 push[0] = -1.0f * WeaponStore.Weapon(id, i).Recoil;
-                Engine.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).Speed);
-                Engine.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).Speed);
+                Engine.SetPDataFloat(id, CsOffsets.NextAttack, WeaponStore.Weapon(id, i).Speed);
+                Engine.SetPDataFloat(entity, CsOffsets.ItemNextPrimaryAttack, WeaponStore.Weapon(id, i).Speed);
             }
             else if (silenced)
             {
                 push[0] = -1.0f * WeaponStore.Weapon(id, i).SilencedRecoil;
-                Engine.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).SilencedSpeed);
-                Engine.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).SilencedSpeed);
+                Engine.SetPDataFloat(id, CsOffsets.NextAttack, WeaponStore.Weapon(id, i).SilencedSpeed);
+                Engine.SetPDataFloat(entity, CsOffsets.ItemNextPrimaryAttack, WeaponStore.Weapon(id, i).SilencedSpeed);
             }
             pPlayer->v.punchangle = new vec3_t { x = push[0], y = push[1], z = push[2] };
             if (silenced) PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).Anim[Engine.RandomNum(WpnConst.AnimShoot1Silenced, WpnConst.AnimShoot3Silenced)]);
@@ -105,12 +105,12 @@ public static unsafe partial class Attack
                 }
             }
             else PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).Anim[Engine.RandomNum(WpnConst.AnimShoot1, WpnConst.AnimShoot3)]);
-            if (Engine.GetPDataInt(entity, 51) > 0)
+            if (Engine.GetPDataInt(entity, CsOffsets.ItemClip) > 0)
             {
                 int postResult = NativeFunctionRegister.Execute_WpnPrimaryPostAttack(entityIndex, id, i);
                 if (postResult == WpnConst.WPN_SUPERCEDE) return EngineConst.HamSupercede;
             }
-            Engine.SetPDataInt(entity, 51, Engine.GetPDataInt(entity, 51) - 1);
+            Engine.SetPDataInt(entity, CsOffsets.ItemClip, Engine.GetPDataInt(entity, CsOffsets.ItemClip) - 1);
             NativeFunctionRegister.Execute_WpnPrimaryPostAttackPost(entityIndex, id, i);
             return EngineConst.HamSupercede;
         }
@@ -123,7 +123,7 @@ public static unsafe partial class Attack
         WeaponStore.Player(id).PushAngle[0] = pPlayer->v.punchangle.x;
         WeaponStore.Player(id).PushAngle[1] = pPlayer->v.punchangle.y;
         WeaponStore.Player(id).PushAngle[2] = pPlayer->v.punchangle.z;
-        WeaponStore.Player(id).ClipAmmo = Engine.GetPDataInt(entity, 51);
+        WeaponStore.Player(id).ClipAmmo = Engine.GetPDataInt(entity, CsOffsets.ItemClip);
         NativeFunctionRegister.Execute_WpnPrimaryPreAttackPost(entityIndex, id, i);
         return EngineConst.HamIgnored;
     }
@@ -135,7 +135,7 @@ public static unsafe partial class Attack
         WeaponStore.IsInPrimaryAttack = false;
         var entity = Engine.EntOfIndex(entityIndex);
         if (entity == null) return;
-        var pPlayer = Engine.GetPDataCbase(entity, 41);
+        var pPlayer = Engine.GetPDataCbase(entity, CsOffsets.ItemOwner);
         if (pPlayer == null) return;
         int id = Engine.IndexOf(pPlayer);
         int i = WeaponStore.GetWeaponType(entity);
@@ -145,21 +145,21 @@ public static unsafe partial class Attack
         {
             if (WeaponStore.Weapon(id, i).KnifeSlashTime == 0.0f)
             {
-                Engine.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).KnifeSlashResetTime);
-                Engine.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).KnifeSlashResetTime);
+                Engine.SetPDataFloat(id, CsOffsets.NextAttack, WeaponStore.Weapon(id, i).KnifeSlashResetTime);
+                Engine.SetPDataFloat(entity, CsOffsets.ItemNextPrimaryAttack, WeaponStore.Weapon(id, i).KnifeSlashResetTime);
             }
             return;
         }
         if (!wasInPrimaryAttack) return;
 
-        if (Engine.GetPDataInt(entity, 51) > 0)
+        if (Engine.GetPDataInt(entity, CsOffsets.ItemClip) > 0)
         {
             int preResult = NativeFunctionRegister.Execute_WpnPrimaryPostAttack(entityIndex, id, i);
             if (preResult == WpnConst.WPN_SUPERCEDE) return;
         }
-        if (WeaponStore.Player(id).ClipAmmo == 0 || WeaponStore.Player(id).ClipAmmo == Engine.GetPDataInt(entity, 51)) return;
+        if (WeaponStore.Player(id).ClipAmmo == 0 || WeaponStore.Player(id).ClipAmmo == Engine.GetPDataInt(entity, CsOffsets.ItemClip)) return;
 
-        bool silenced = (Engine.GetPDataInt(entity, 74) & (1 << 2)) != 0 || (Engine.GetPDataInt(entity, 74) & (1 << 0)) != 0;
+        bool silenced = (Engine.GetPDataInt(entity, CsOffsets.ItemWeaponState) & (1 << 2)) != 0 || (Engine.GetPDataInt(entity, CsOffsets.ItemWeaponState) & (1 << 0)) != 0;
 
         var push = new float[] { pPlayer->v.punchangle.x, pPlayer->v.punchangle.y, pPlayer->v.punchangle.z };
         push[0] -= WeaponStore.Player(id).PushAngle[0];
@@ -184,24 +184,24 @@ public static unsafe partial class Attack
             push[0] *= WeaponStore.Weapon(id, i).AimRecoil;
             push[1] *= WeaponStore.Weapon(id, i).AimRecoil;
             push[2] *= WeaponStore.Weapon(id, i).AimRecoil;
-            Engine.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).AimSpeed);
-            Engine.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).AimSpeed);
+            Engine.SetPDataFloat(id, CsOffsets.NextAttack, WeaponStore.Weapon(id, i).AimSpeed);
+            Engine.SetPDataFloat(entity, CsOffsets.ItemNextPrimaryAttack, WeaponStore.Weapon(id, i).AimSpeed);
         }
         else if (PlayerStocks.GetUserZoom(id) == 1 && WeaponStore.Player(id).SightMode != WpnConst.Open && !silenced)
         {
             push[0] *= WeaponStore.Weapon(id, i).Recoil;
             push[1] *= WeaponStore.Weapon(id, i).Recoil;
             push[2] *= WeaponStore.Weapon(id, i).Recoil;
-            Engine.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).Speed);
-            Engine.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).Speed);
+            Engine.SetPDataFloat(id, CsOffsets.NextAttack, WeaponStore.Weapon(id, i).Speed);
+            Engine.SetPDataFloat(entity, CsOffsets.ItemNextPrimaryAttack, WeaponStore.Weapon(id, i).Speed);
         }
         else if (silenced)
         {
             push[0] *= WeaponStore.Weapon(id, i).SilencedRecoil;
             push[1] *= WeaponStore.Weapon(id, i).SilencedRecoil;
             push[2] *= WeaponStore.Weapon(id, i).SilencedRecoil;
-            Engine.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).SilencedSpeed);
-            Engine.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).SilencedSpeed);
+            Engine.SetPDataFloat(id, CsOffsets.NextAttack, WeaponStore.Weapon(id, i).SilencedSpeed);
+            Engine.SetPDataFloat(entity, CsOffsets.ItemNextPrimaryAttack, WeaponStore.Weapon(id, i).SilencedSpeed);
         }
         push[0] += WeaponStore.Player(id).PushAngle[0];
         push[1] += WeaponStore.Player(id).PushAngle[1];
@@ -230,7 +230,7 @@ public static unsafe partial class Attack
     {
         var entity = Engine.EntOfIndex(entityIndex);
         if (entity == null) return EngineConst.HamIgnored;
-        var pPlayer = Engine.GetPDataCbase(entity, 41);
+        var pPlayer = Engine.GetPDataCbase(entity, CsOffsets.ItemOwner);
         if (pPlayer == null) return EngineConst.HamIgnored;
         int id = Engine.IndexOf(pPlayer);
         int i = WeaponStore.GetWeaponType(entity);
@@ -273,7 +273,7 @@ public static unsafe partial class Attack
     {
         var entity = Engine.EntOfIndex(entityIndex);
         if (entity == null) return;
-        var pPlayer = Engine.GetPDataCbase(entity, 41);
+        var pPlayer = Engine.GetPDataCbase(entity, CsOffsets.ItemOwner);
         if (pPlayer == null) return;
         int id = Engine.IndexOf(pPlayer);
         int i = WeaponStore.GetWeaponType(entity);
@@ -286,8 +286,8 @@ public static unsafe partial class Attack
         {
             if (WeaponStore.Weapon(id, i).KnifeStabTime == 0.0f)
             {
-                Engine.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).KnifeStabResetTime);
-                Engine.SetPDataFloat(entity, 47, WeaponStore.Weapon(id, i).KnifeStabResetTime);
+                Engine.SetPDataFloat(id, CsOffsets.NextAttack, WeaponStore.Weapon(id, i).KnifeStabResetTime);
+                Engine.SetPDataFloat(entity, CsOffsets.ItemNextSecondaryAttack, WeaponStore.Weapon(id, i).KnifeStabResetTime);
             }
             return;
         }
@@ -303,25 +303,25 @@ public static unsafe partial class Attack
         }
         if (WeaponStore.Weapon(id, i).Id == EngineConst.CswM4a1 || WeaponStore.Weapon(id, i).Id == EngineConst.CswUsp)
         {
-            if ((Engine.GetPDataInt(entity, 74) & (1 << 2)) != 0 || (Engine.GetPDataInt(entity, 74) & (1 << 0)) != 0)
+            if ((Engine.GetPDataInt(entity, CsOffsets.ItemWeaponState) & (1 << 2)) != 0 || (Engine.GetPDataInt(entity, CsOffsets.ItemWeaponState) & (1 << 0)) != 0)
             {
-                if (WeaponStore.Weapon(id, i).Id == EngineConst.CswM4a1) Engine.SetPDataInt(entity, 74, Engine.GetPDataInt(entity, 74) & ~(1 << 2));
-                else if (WeaponStore.Weapon(id, i).Id == EngineConst.CswUsp) Engine.SetPDataInt(entity, 74, Engine.GetPDataInt(entity, 74) & ~(1 << 0));
+                if (WeaponStore.Weapon(id, i).Id == EngineConst.CswM4a1) Engine.SetPDataInt(entity, CsOffsets.ItemWeaponState, Engine.GetPDataInt(entity, CsOffsets.ItemWeaponState) & ~(1 << 2));
+                else if (WeaponStore.Weapon(id, i).Id == EngineConst.CswUsp) Engine.SetPDataInt(entity, CsOffsets.ItemWeaponState, Engine.GetPDataInt(entity, CsOffsets.ItemWeaponState) & ~(1 << 0));
                 PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).Anim[WpnConst.AnimDetachSilencer]);
-                Engine.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).SilencedTime[1]);
-                Engine.SetPDataFloat(entity, 47, WeaponStore.Weapon(id, i).SilencedTime[1]);
-                Engine.SetPDataFloat(entity, 48, WeaponStore.Weapon(id, i).SilencedTime[1]);
-                Engine.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).SilencedTime[1]);
+                Engine.SetPDataFloat(entity, CsOffsets.ItemNextPrimaryAttack, WeaponStore.Weapon(id, i).SilencedTime[1]);
+                Engine.SetPDataFloat(entity, CsOffsets.ItemNextSecondaryAttack, WeaponStore.Weapon(id, i).SilencedTime[1]);
+                Engine.SetPDataFloat(entity, CsOffsets.ItemTimeWeaponIdle, WeaponStore.Weapon(id, i).SilencedTime[1]);
+                Engine.SetPDataFloat(id, CsOffsets.NextAttack, WeaponStore.Weapon(id, i).SilencedTime[1]);
             }
             else
             {
-                if (WeaponStore.Weapon(id, i).Id == EngineConst.CswM4a1) Engine.SetPDataInt(entity, 74, Engine.GetPDataInt(entity, 74) | (1 << 2));
-                else if (WeaponStore.Weapon(id, i).Id == EngineConst.CswUsp) Engine.SetPDataInt(entity, 74, Engine.GetPDataInt(entity, 74) | (1 << 0));
+                if (WeaponStore.Weapon(id, i).Id == EngineConst.CswM4a1) Engine.SetPDataInt(entity, CsOffsets.ItemWeaponState, Engine.GetPDataInt(entity, CsOffsets.ItemWeaponState) | (1 << 2));
+                else if (WeaponStore.Weapon(id, i).Id == EngineConst.CswUsp) Engine.SetPDataInt(entity, CsOffsets.ItemWeaponState, Engine.GetPDataInt(entity, CsOffsets.ItemWeaponState) | (1 << 0));
                 PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).Anim[WpnConst.AnimAttachSilencer]);
-                Engine.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).SilencedTime[0]);
-                Engine.SetPDataFloat(entity, 47, WeaponStore.Weapon(id, i).SilencedTime[0]);
-                Engine.SetPDataFloat(entity, 48, WeaponStore.Weapon(id, i).SilencedTime[0]);
-                Engine.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).SilencedTime[0]);
+                Engine.SetPDataFloat(entity, CsOffsets.ItemNextPrimaryAttack, WeaponStore.Weapon(id, i).SilencedTime[0]);
+                Engine.SetPDataFloat(entity, CsOffsets.ItemNextSecondaryAttack, WeaponStore.Weapon(id, i).SilencedTime[0]);
+                Engine.SetPDataFloat(entity, CsOffsets.ItemTimeWeaponIdle, WeaponStore.Weapon(id, i).SilencedTime[0]);
+                Engine.SetPDataFloat(id, CsOffsets.NextAttack, WeaponStore.Weapon(id, i).SilencedTime[0]);
             }
         }
         NativeFunctionRegister.Execute_WpnSecondaryPostAttackPost(entityIndex, id, i);

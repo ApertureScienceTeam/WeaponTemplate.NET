@@ -24,6 +24,7 @@
 	<ItemGroup>
 		<Compile Include="..\Shared\Consts\WpnConst.cs" Link="Consts\WpnConst.cs" />
 		<Compile Include="..\Shared\Consts\EngineConst.cs" Link="Consts\EngineConst.cs" />
+		<Compile Include="..\Shared\Consts\CsOffsets.cs" Link="Consts\CsOffsets.cs" />
 		<Compile Include="..\Shared\Engine\Engine.cs" Link="Engine\Engine.cs" />
 		<Compile Include="..\Shared\Engine\EngineStrings.cs" Link="Engine\EngineStrings.cs" />
 		<Compile Include="..\Shared\Engine\EngineResources.cs" Link="Engine\EngineResources.cs" />

@@ -14,7 +14,7 @@ public static unsafe partial class WeaponEffects
         if (!Engine.IsAlive(attacker)) return;
 
         var pAttacker = Engine.EntOfIndex(attacker);
-        var activeItem = pAttacker == null ? null : Engine.GetPDataCbase(pAttacker, 373);
+        var activeItem = pAttacker == null ? null : Engine.GetPDataCbase(pAttacker, CsOffsets.ActiveItem);
         int i = Engine.IsValid(activeItem) ? WeaponStore.GetWeaponType(activeItem) : 0;
         if (i == 0) return;
 

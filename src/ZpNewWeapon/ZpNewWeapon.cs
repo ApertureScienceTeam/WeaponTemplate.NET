@@ -93,7 +93,7 @@ public static unsafe partial class ZpNewWeapon
 
         if (itemId == AmmoItemId[0])
         {
-            var entity = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, 368);
+            var entity = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, CsOffsets.PrimaryWeapon);
             if (Engine.IsValid(entity))
             {
                 int i = WeaponTypeByIndex(Engine.IndexOf(entity));
@@ -103,7 +103,7 @@ public static unsafe partial class ZpNewWeapon
         }
         else if (itemId == AmmoItemId[1])
         {
-            var entity = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, 369);
+            var entity = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, CsOffsets.SecondaryWeapon);
             if (Engine.IsValid(entity))
             {
                 int i = WeaponTypeByIndex(Engine.IndexOf(entity));
@@ -132,7 +132,7 @@ public static unsafe partial class ZpNewWeapon
         if (index <= 0) return 0;
         var entity = Engine.EntOfIndex(index);
         if (!Engine.IsValid(entity)) return 0;
-        int serial = ((int*)entity->pvPrivateData)[11];
+        int serial = Engine.GetPDataInt(entity, CsOffsets.ItemTemplateSerial);
         return serial >= 1 && serial < MaxWeapon ? serial : 0;
     }
 }

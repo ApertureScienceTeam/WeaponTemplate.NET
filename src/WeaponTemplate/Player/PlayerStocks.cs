@@ -11,7 +11,7 @@ public static unsafe class PlayerStocks
     public static int GetUserMoney(int id)
     {
         var p = Engine.EntOfIndex(id);
-        return p == null ? 0 : Engine.GetPDataInt(p, 115);
+        return p == null ? 0 : Engine.GetPDataInt(p, CsOffsets.Money);
     }
 
     // stock fm_set_user_money(id, iMoney, iFlash = 1)
@@ -20,7 +20,7 @@ public static unsafe class PlayerStocks
         var p = Engine.EntOfIndex(id);
         if (p == null) return;
         money = Math.Min(money, WeaponStore.MaxMoney);
-        Engine.SetPDataInt(p, 115, money);
+        Engine.SetPDataInt(p, CsOffsets.Money, money);
         int msg = Engine.UserMsgId("Money");
         Engine.MessageBegin(EngineConst.MsgOne, msg, null, p);
         Engine.WriteLong(money);
@@ -49,31 +49,14 @@ public static unsafe class PlayerStocks
         Engine.SetPDataInt(p, offset, amount);
     }
 
-    // 原版 fm_cs_(get|set)_user_bpammo 的偏移表
-    private static int BpAmmoOffset(int weaponId) => weaponId switch
-    {
-        EngineConst.CswAwp => 377,
-        EngineConst.CswScout or EngineConst.CswAk47 or EngineConst.CswG3sg1 => 378,
-        EngineConst.CswM249 => 379,
-        EngineConst.CswM4a1 or EngineConst.CswFamas or EngineConst.CswAug or EngineConst.CswSg550 or EngineConst.CswGali or EngineConst.CswSg552 => 380,
-        EngineConst.CswM3 or EngineConst.CswXm1014 => 381,
-        EngineConst.CswUsp or EngineConst.CswUmp45 or EngineConst.CswMac10 => 382,
-        EngineConst.CswFiveseven or EngineConst.CswP90 => 383,
-        EngineConst.CswDeagle => 384,
-        EngineConst.CswP228 => 385,
-        EngineConst.CswGlock18 or EngineConst.CswMp5Navy or EngineConst.CswTmp or EngineConst.CswElite => 386,
-        EngineConst.CswFlashbang => 387,
-        EngineConst.CswHegrenade => 388,
-        EngineConst.CswSmokegrenade => 389,
-        EngineConst.CswC4 => 390,
-        _ => -1,
-    };
+    // 原版 fm_cs_(get|set)_user_bpammo 的偏移表(含 Linux 列),见 CsOffsets.BpAmmoOffset
+    private static int BpAmmoOffset(int weaponId) => CsOffsets.BpAmmoOffset(weaponId);
 
     public static int GetUserZoom(int id)
     {
         var p = Engine.EntOfIndex(id);
         if (p == null) return 0;
-        int value = Engine.GetPDataInt(p, 363);
+        int value = Engine.GetPDataInt(p, CsOffsets.Zoom);
         return value switch
         {
             0x5A => 1,

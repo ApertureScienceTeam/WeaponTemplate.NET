@@ -53,7 +53,7 @@ public static unsafe partial class WeaponDamage
         }
         else
         {
-            var activeItem = Engine.GetPDataCbase(pAttacker, 373);
+            var activeItem = Engine.GetPDataCbase(pAttacker, CsOffsets.ActiveItem);
             if (activeItem == null) return EngineConst.HamIgnored;
 
             i = WeaponStore.GetWeaponType(activeItem);
@@ -86,14 +86,14 @@ public static unsafe partial class WeaponDamage
         var pVictim = Engine.EntOfIndex(victim);
         if (pAttacker == null || pVictim == null) return;
 
-        if (Engine.GetPDataInt(pAttacker, 114) == Engine.GetPDataInt(pVictim, 114)) return;
+        if (Engine.GetPDataInt(pAttacker, CsOffsets.Team) == Engine.GetPDataInt(pVictim, CsOffsets.Team)) return;
 
         if (WeaponStore.Player(attacker).AttackerEntity != 0)
         {
             float health = pVictim->v.health;
             if (health - damage > 0.0f) WeaponStore.Player(attacker).AttackerEntity = 0;
         }
-        var activeItem = Engine.GetPDataCbase(pAttacker, 373);
+        var activeItem = Engine.GetPDataCbase(pAttacker, CsOffsets.ActiveItem);
         if (activeItem == null) return;
 
         int i = WeaponStore.GetWeaponType(activeItem);
@@ -194,7 +194,7 @@ public static unsafe partial class WeaponDamage
             if (found->v.solid <= EngineConst.SolidNot) continue;
             if (found->v.takedamage <= 0.0f) continue;
             var pOwner = Engine.EntOfIndex(ownerId);
-            if (victim != ownerId && Engine.IsConnected(victim) && Engine.IsValid(pOwner) && Engine.GetPDataInt(pOwner, 114) == Engine.GetPDataInt(found, 114) && Engine.CvarNum("mp_friendlyfire") == 0)
+            if (victim != ownerId && Engine.IsConnected(victim) && Engine.IsValid(pOwner) && Engine.GetPDataInt(pOwner, CsOffsets.Team) == Engine.GetPDataInt(found, CsOffsets.Team) && Engine.CvarNum("mp_friendlyfire") == 0)
                 continue;
 
             HamSandwich.TakeDamage(victim, entityIndex, ownerId, 100.0f, 1 << 24);

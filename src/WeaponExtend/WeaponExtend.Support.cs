@@ -66,7 +66,7 @@ public static unsafe partial class WeaponExtend
 
     // ---- 工具函数(模块业务语义,底层走 Eng/VectorMath) ----
 
-    private static int GetPlayerTeam(int id) => Engine.GetPDataInt(id, 114); // m_iTeam
+    private static int GetPlayerTeam(int id) => Engine.GetPDataInt(id, CsOffsets.Team); // m_iTeam
 
     // stock CheckSuffix
     private static bool CheckSuffix(string fileName, string suffix)

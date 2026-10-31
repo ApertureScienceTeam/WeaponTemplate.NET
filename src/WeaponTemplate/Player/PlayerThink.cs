@@ -25,7 +25,7 @@ public static unsafe partial class PlayerThink
         if (!WeaponStore.RoundStart) return;
 
         var pPlayer = Engine.EntOfIndex(id);
-        var activeItem = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, 373);
+        var activeItem = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, CsOffsets.ActiveItem);
         if (!Engine.IsValid(activeItem)) return;
 
         int i = WeaponStore.GetWeaponType(activeItem);

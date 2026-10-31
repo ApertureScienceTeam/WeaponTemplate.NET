@@ -24,7 +24,7 @@ public static unsafe partial class Attack
         if (!Engine.IsAlive(id)) return;
 
         var pPlayer = Engine.EntOfIndex(id);
-        var entity = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, 373);
+        var entity = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, CsOffsets.ActiveItem);
         if (!Engine.IsValid(entity)) return;
 
         int i = WeaponStore.GetWeaponType(entity);
@@ -47,7 +47,7 @@ public static unsafe partial class Attack
         if (!Engine.IsConnected(id) || !WeaponStore.IsInPrimaryAttack) { return; }
 
         var pPlayer = Engine.EntOfIndex(id);
-        var entity = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, 373);
+        var entity = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, CsOffsets.ActiveItem);
         int i = Engine.IsValid(entity) ? WeaponStore.GetWeaponType(entity) : 0;
         if (i == 0 || WeaponStore.Weapon(id, i).Id == EngineConst.CswKnife) { return; }
 
@@ -74,11 +74,11 @@ public static unsafe partial class Attack
         if (!Engine.IsConnected(id)) return false;
 
         var pPlayer = Engine.EntOfIndex(id);
-        var activeItem = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, 373);
+        var activeItem = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, CsOffsets.ActiveItem);
         int i = Engine.IsValid(activeItem) ? WeaponStore.GetWeaponType(activeItem) : 0;
 
         string sample = Marshal.PtrToStringAnsi((nint)samplePtr) ?? "";
-        if (!sample.StartsWith("weapons/knife_") || i == 0 || Engine.GetPDataInt(activeItem, 43) != EngineConst.CswKnife)
+        if (!sample.StartsWith("weapons/knife_") || i == 0 || Engine.GetPDataInt(activeItem, CsOffsets.ItemId) != EngineConst.CswKnife)
             return false;
 
         int attack = WeaponStore.Player(id).UserKnifeAttack;
@@ -140,7 +140,7 @@ public static unsafe partial class Attack
         if (!Engine.IsConnected(id)) return false;
 
         var pPlayer = Engine.EntOfIndex(id);
-        var activeItem = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, 373);
+        var activeItem = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, CsOffsets.ActiveItem);
         if (!Engine.IsValid(activeItem)) return false;
 
         int i = WeaponStore.GetWeaponType(activeItem);
@@ -155,7 +155,7 @@ public static unsafe partial class Attack
             dir[0] /= 8192.0f; dir[1] /= 8192.0f; dir[2] /= 8192.0f;
             Span<float> forward = stackalloc float[3] { Engine.GP->v_forward.x, Engine.GP->v_forward.y, Engine.GP->v_forward.z };
             VectorMath.VecSub(dir, forward, dir);
-            if ((Engine.GetPDataInt(activeItem, 74) & ((1 << 2) | (1 << 0))) != 0)
+            if ((Engine.GetPDataInt(activeItem, CsOffsets.ItemWeaponState) & ((1 << 2) | (1 << 0))) != 0)
                 VectorMath.VecMulScalar(dir, WeaponStore.Weapon(id, i).SilencedAccuracy, dir);
             else if (PlayerStocks.GetUserZoom(id) != 1 || WeaponStore.Player(id).SightMode == WpnConst.Open)
                 VectorMath.VecMulScalar(dir, WeaponStore.Weapon(id, i).AimAccuracy, dir);
@@ -169,7 +169,7 @@ public static unsafe partial class Attack
             return true;
         }
 
-        if (Engine.GetPDataInt(activeItem, 43) != EngineConst.CswKnife || i == 0) return false;
+        if (Engine.GetPDataInt(activeItem, CsOffsets.ItemId) != EngineConst.CswKnife || i == 0) return false;
 
         if ((WeaponStore.Weapon(id, i).KnifeSlashTime != 0.0f && WeaponStore.Weapon(id, i).KnifeSlashAngle != 0.0f) ||
             (WeaponStore.Weapon(id, i).KnifeStabTime != 0.0f && WeaponStore.Weapon(id, i).KnifeSlashAngle != 0.0f))
@@ -215,11 +215,11 @@ public static unsafe partial class Attack
         if (!Engine.IsConnected(id)) return false;
 
         var pPlayer = Engine.EntOfIndex(id);
-        var activeItem = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, 373);
+        var activeItem = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, CsOffsets.ActiveItem);
         if (!Engine.IsValid(activeItem)) return false;
 
         int i = WeaponStore.GetWeaponType(activeItem);
-        if (Engine.GetPDataInt(activeItem, 43) != EngineConst.CswKnife || i == 0) return false;
+        if (Engine.GetPDataInt(activeItem, CsOffsets.ItemId) != EngineConst.CswKnife || i == 0) return false;
 
         if ((WeaponStore.Weapon(id, i).KnifeSlashTime != 0.0f && WeaponStore.Weapon(id, i).KnifeSlashAngle != 0.0f) ||
             (WeaponStore.Weapon(id, i).KnifeStabTime != 0.0f && WeaponStore.Weapon(id, i).KnifeSlashAngle != 0.0f))

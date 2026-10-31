@@ -24,7 +24,6 @@ public static unsafe partial class WeaponExtend
 {
     private const string PluginName = "Weapon Extend Template";
 
-    private const int WeaponIdPData = 11; // 原版 WEAPON_ID = ammo_buckshot = 11
 
     private const int WpnTypeProjectile = 1;
     private const int WpnTypeAoeDamage = 2;

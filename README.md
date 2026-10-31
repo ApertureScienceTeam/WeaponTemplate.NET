@@ -21,7 +21,7 @@ WeaponTemplate.NET/
 ├── artifacts/                   # publish 产物(三个原生 DLL)
 └── src/
     ├── Shared/                  # 三模块共用的移植兼容层(csproj 按类型分文件夹链接)
-    │   ├── Consts/              # WpnConst(wpn_const.inc 唯一翻译) + EngineConst(引擎常量唯一翻译)
+    │   ├── Consts/              # WpnConst(wpn_const.inc 唯一翻译) + EngineConst(引擎常量唯一翻译) + CsOffsets(pdata 偏移字典,Windows/Linux 双列按平台取值)
     │   ├── Engine/              # Engine(fakemeta/HLSDK 封装唯一实现) + EngineStrings(引擎字符串池) + EngineResources(precache 下标缓存) + HookResult(metamod mres)
     │   └── Math/                # VectorMath(向量/角度/弹道起点) + FloatMath(floatround 语义标量舍入)
     ├── WeaponTemplate/          # 核心模块(WeaponTemplate.sma 的移植)
@@ -43,7 +43,7 @@ WeaponTemplate.NET/
 | `RegisterHam`(hamsandwich) | `[AmxxImportNative("RegisterHam")]` 声明式导入（`Interop/HamSandwich.cs`，`RegisterHamFromEntity`/`ExecuteHam(B)`/`SetHamParamFloat` 同类），回调经 bridge public（`[AmxxCallback]`）进入 C#；返回 `HAM_IGNORED(1)/HAM_SUPERCEDE(4)` |
 | `register_message` / `register_event` / `register_logevent` | `register_message` 及 `get/set_msg_arg_*` 经 `[AmxxImportNative]` 导入（`Interop/AmxModX.cs`）；`register_event` / `register_logevent` 经 `MF.RegisterEvent` / `MF.RegisterLogEvent`，回调同为 bridge public |
 | fakemeta `pev/set_pev/engfunc/dllfunc` | HLSDK 结构体直接访问（`edict_t->v`、`ModuleRuntime.g_engfuncs`、`gpGamedllFuncs->dllapi_table`） |
-| `get_pdata_*` / `get_pdata_cbase` | `pvPrivateData` 单元读写（Windows 偏移，linuxdiff 仅 Linux 生效故原样使用）；cbase 转换 = `[vtable][pev*]` 布局 → `pev->pContainingEntity` |
+| `get_pdata_*` / `get_pdata_cbase` | `pvPrivateData` 单元读写，偏移一律经 `Shared/Consts/CsOffsets` 命名常量（Windows/Linux 双列，运行时按平台取值；Linux 差值族：玩家 int/float +5、玩家 cbase 与 m_rgAmmo +41、武器实体 +4，原版玩家 cbase 调用在 Linux 下实为错误值故以社区偏移为准）；cbase 转换 = `[vtable][pev*]` 布局 → `pev->pContainingEntity`。**平台范围**：Linux 的代码层已就绪，构建目标仍为 win-x86（.NET NativeAOT 暂不支持 linux-x86） |
 | `CreateMultiForward` 的 WPN_* 事件 | `[AmxxForward]` + `ET_CONTINUE`（SDK 在插件加载后自动注册，保留插件返回值）+ 生成的 `Execute_WpnXxx`；**例外**：`WPN_LoadFiles` 需在 precache 阶段触发，于 `plugin_precache` 中手动 `MF.RegisterForward`/`MF.ExecuteForward` |
 | `register_native` 的 WPN_* | 显式 `[AmxxNative("WPN_...")]`，与 include 保持相同名称 |
 | `plugin_precache` / `plugin_init` | bridge 插件的同名 public（`[AmxxCallback]`），每张地图执行一次；C# 静态状态由 `Store.ResetAll()` 显式重置 |

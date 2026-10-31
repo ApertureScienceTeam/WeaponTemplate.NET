@@ -13,8 +13,8 @@ public static unsafe partial class WeaponAmmo
         var pPlayer = Engine.EntOfIndex(id);
         if (pPlayer == null) return false;
 
-        int money = Engine.GetPDataInt(pPlayer, 115);
-        int weapon = Engine.GetPDataInt(entity, 43);
+        int money = Engine.GetPDataInt(pPlayer, CsOffsets.Money);
+        int weapon = Engine.GetPDataInt(entity, CsOffsets.ItemId);
         int ammo = wpnId != 0 ? WeaponStore.Player(id).BPAmmo[wpnId] : WeaponStore.Player(id).GameBpAmmo[weapon];
         int maxAmmo = wpnId != 0 ? WeaponStore.Weapon(id, wpnId).Ammo : WeaponStore.GameWeaponMaxBpammo[weapon];
         int amount, cost;
@@ -32,7 +32,7 @@ public static unsafe partial class WeaponAmmo
 
             if (weapon == GameTables.PrimId[i] && money >= cost)
             {
-                if (mode != 0 && Engine.GetPDataInt(entity, 51) >= maxAmmo && wpnId != 0) return false;
+                if (mode != 0 && Engine.GetPDataInt(entity, CsOffsets.ItemClip) >= maxAmmo && wpnId != 0) return false;
                 if (mode == 0 && ammo >= maxAmmo && wpnId != 0) return false;
                 if (wpnId == 0 && ammo >= maxAmmo) return false;
 
@@ -44,8 +44,8 @@ public static unsafe partial class WeaponAmmo
                 Engine.EmitSound(entity, EngineConst.ChanWeapon, "items/9mmclip1.wav", EngineConst.VolNorm, EngineConst.AttnNorm, 1 << 0, EngineConst.PitchNorm);
                 ammo += amount;
                 money -= cost;
-                if (mode != 0) Engine.SetPDataInt(entity, 51, ammo);
-                if (Engine.GetPDataCbase(pPlayer, 373) == entity) PlayerStocks.SetUserBpAmmo(id, weapon, ammo);
+                if (mode != 0) Engine.SetPDataInt(entity, CsOffsets.ItemClip, ammo);
+                if (Engine.GetPDataCbase(pPlayer, CsOffsets.ActiveItem) == entity) PlayerStocks.SetUserBpAmmo(id, weapon, ammo);
                 if (wpnId == 0) WeaponStore.Player(id).GameBpAmmo[weapon] = ammo;
                 else WeaponStore.Player(id).BPAmmo[wpnId] = ammo;
                 PlayerStocks.SetUserMoney(id, money);
@@ -62,8 +62,8 @@ public static unsafe partial class WeaponAmmo
         var pPlayer = Engine.EntOfIndex(id);
         if (pPlayer == null) return false;
 
-        int money = Engine.GetPDataInt(pPlayer, 115);
-        int weapon = Engine.GetPDataInt(entity, 43);
+        int money = Engine.GetPDataInt(pPlayer, CsOffsets.Money);
+        int weapon = Engine.GetPDataInt(entity, CsOffsets.ItemId);
         int ammo = wpnId != 0 ? WeaponStore.Player(id).BPAmmo[wpnId] : WeaponStore.Player(id).GameBpAmmo[weapon];
         int maxAmmo = wpnId != 0 ? WeaponStore.Weapon(id, wpnId).Ammo : WeaponStore.GameWeaponMaxBpammo[weapon];
         int amount, cost;
@@ -81,7 +81,7 @@ public static unsafe partial class WeaponAmmo
 
             if (weapon == GameTables.SecondId[i] && money >= cost)
             {
-                if (mode != 0 && Engine.GetPDataInt(entity, 51) >= maxAmmo && wpnId != 0) return false;
+                if (mode != 0 && Engine.GetPDataInt(entity, CsOffsets.ItemClip) >= maxAmmo && wpnId != 0) return false;
                 if (mode == 0 && ammo >= maxAmmo && wpnId != 0) return false;
                 if (wpnId == 0 && ammo >= maxAmmo) return false;
 
@@ -93,8 +93,8 @@ public static unsafe partial class WeaponAmmo
                 Engine.EmitSound(entity, EngineConst.ChanWeapon, "items/9mmclip1.wav", EngineConst.VolNorm, EngineConst.AttnNorm, 1 << 0, EngineConst.PitchNorm);
                 ammo += amount;
                 money -= cost;
-                if (mode != 0) Engine.SetPDataInt(entity, 51, ammo);
-                if (Engine.GetPDataCbase(pPlayer, 373) == entity) PlayerStocks.SetUserBpAmmo(id, weapon, ammo);
+                if (mode != 0) Engine.SetPDataInt(entity, CsOffsets.ItemClip, ammo);
+                if (Engine.GetPDataCbase(pPlayer, CsOffsets.ActiveItem) == entity) PlayerStocks.SetUserBpAmmo(id, weapon, ammo);
                 if (wpnId == 0) WeaponStore.Player(id).GameBpAmmo[weapon] = ammo;
                 else WeaponStore.Player(id).BPAmmo[wpnId] = ammo;
                 PlayerStocks.SetUserMoney(id, money);
@@ -112,7 +112,7 @@ public static unsafe partial class WeaponAmmo
 
         for (int i = 0; i < WpnConst.MaxPrim; i++)
         {
-            if (Engine.GetPDataInt(entity, 43) == GameTables.PrimId[i])
+            if (Engine.GetPDataInt(entity, CsOffsets.ItemId) == GameTables.PrimId[i])
             {
                 if (WeaponStore.Weapon(id, wpnId).Clip == 0)
                 {
@@ -136,7 +136,7 @@ public static unsafe partial class WeaponAmmo
         }
         for (int i = 0; i < WpnConst.MaxSec; i++)
         {
-            if (Engine.GetPDataInt(entity, 43) == GameTables.SecondId[i])
+            if (Engine.GetPDataInt(entity, CsOffsets.ItemId) == GameTables.SecondId[i])
             {
                 if (WeaponStore.Weapon(id, wpnId).Clip == 0)
                 {
@@ -166,39 +166,39 @@ public static unsafe partial class WeaponAmmo
         int i = WeaponStore.GetWeaponType(entity);
         if (bpAmmo <= 0 || maxClip == clip) return;
 
-        if (Engine.GetPDataFloat(entity, 46) > 0.0f) return;
+        if (Engine.GetPDataFloat(entity, CsOffsets.ItemNextPrimaryAttack) > 0.0f) return;
 
-        switch (Engine.GetPDataInt(entity, 55))
+        switch (Engine.GetPDataInt(entity, CsOffsets.ItemInSpecialReload))
         {
             case 0:
             {
                 // 开始换弹
                 PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).Anim[WpnConst.AnimStartReload]);
-                Engine.SetPDataInt(entity, 55, 1);
-                Engine.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).ReloadTime[1]);
-                Engine.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).ReloadTime[1]);
-                Engine.SetPDataFloat(entity, 48, WeaponStore.Weapon(id, i).ReloadTime[1]);
+                Engine.SetPDataInt(entity, CsOffsets.ItemInSpecialReload, 1);
+                Engine.SetPDataFloat(id, CsOffsets.NextAttack, WeaponStore.Weapon(id, i).ReloadTime[1]);
+                Engine.SetPDataFloat(entity, CsOffsets.ItemNextPrimaryAttack, WeaponStore.Weapon(id, i).ReloadTime[1]);
+                Engine.SetPDataFloat(entity, CsOffsets.ItemTimeWeaponIdle, WeaponStore.Weapon(id, i).ReloadTime[1]);
                 return;
             }
             case 1:
             {
-                if (Engine.GetPDataFloat(entity, 48) > 0.0f) return;
+                if (Engine.GetPDataFloat(entity, CsOffsets.ItemTimeWeaponIdle) > 0.0f) return;
 
                 // 装弹动作
-                Engine.SetPDataInt(entity, 55, 2);
+                Engine.SetPDataInt(entity, CsOffsets.ItemInSpecialReload, 2);
                 PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).Anim[WpnConst.AnimInsert]);
-                Engine.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).ReloadTime[0]);
-                Engine.SetPDataFloat(entity, 48, WeaponStore.Weapon(id, i).ReloadTime[0]);
-                Engine.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).ReloadTime[0]);
+                Engine.SetPDataFloat(entity, CsOffsets.ItemNextPrimaryAttack, WeaponStore.Weapon(id, i).ReloadTime[0]);
+                Engine.SetPDataFloat(entity, CsOffsets.ItemTimeWeaponIdle, WeaponStore.Weapon(id, i).ReloadTime[0]);
+                Engine.SetPDataFloat(id, CsOffsets.NextAttack, WeaponStore.Weapon(id, i).ReloadTime[0]);
                 break;
             }
             default:
             {
                 // 子弹+1
-                Engine.SetPDataInt(entity, 51, clip + 1);
+                Engine.SetPDataInt(entity, CsOffsets.ItemClip, clip + 1);
                 PlayerStocks.SetUserBpAmmo(id, weaponId, bpAmmo - 1);
                 WeaponStore.Player(id).BPAmmo[i] = bpAmmo - 1;
-                Engine.SetPDataInt(entity, 55, 1);
+                Engine.SetPDataInt(entity, CsOffsets.ItemInSpecialReload, 1);
                 break;
             }
         }

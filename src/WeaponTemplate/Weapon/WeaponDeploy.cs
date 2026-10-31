@@ -12,7 +12,7 @@ public static unsafe partial class WeaponDeploy
     {
         var entity = Engine.EntOfIndex(entityIndex);
         if (entity == null) return;
-        if (Engine.GetPDataInt(entity, 43) == EngineConst.CswC4) return;
+        if (Engine.GetPDataInt(entity, CsOffsets.ItemId) == EngineConst.CswC4) return;
         WeaponGive.ChangeWeaponList(id, entity);
     }
 
@@ -21,15 +21,15 @@ public static unsafe partial class WeaponDeploy
     {
         var entity = Engine.EntOfIndex(entityIndex);
         if (entity == null) return EngineConst.HamIgnored;
-        var pPlayer = Engine.GetPDataCbase(entity, 41);
+        var pPlayer = Engine.GetPDataCbase(entity, CsOffsets.ItemOwner);
         if (pPlayer == null) return EngineConst.HamIgnored;
         int id = Engine.IndexOf(pPlayer);
         int i = WeaponStore.GetWeaponType(entity);
         if (i == 0) return EngineConst.HamIgnored;
 
         // AWP无法设置切枪时间的bug
-        WeaponStore.Player(id).UserDeploy[0] = Engine.GetPDataFloat(entity, 46);
-        WeaponStore.Player(id).UserDeploy[1] = Engine.GetPDataFloat(entity, 47);
+        WeaponStore.Player(id).UserDeploy[0] = Engine.GetPDataFloat(entity, CsOffsets.ItemNextPrimaryAttack);
+        WeaponStore.Player(id).UserDeploy[1] = Engine.GetPDataFloat(entity, CsOffsets.ItemNextSecondaryAttack);
         return EngineConst.HamIgnored;
     }
 
@@ -38,7 +38,7 @@ public static unsafe partial class WeaponDeploy
     {
         var entity = Engine.EntOfIndex(entityIndex);
         if (entity == null) return;
-        var pPlayer = Engine.GetPDataCbase(entity, 41);
+        var pPlayer = Engine.GetPDataCbase(entity, CsOffsets.ItemOwner);
         if (pPlayer == null) return;
         int id = Engine.IndexOf(pPlayer);
         int i = WeaponStore.GetWeaponType(entity);
@@ -46,7 +46,7 @@ public static unsafe partial class WeaponDeploy
         if (i == 0)
         {
             // 记录原版武器备弹
-            int weapon = Engine.GetPDataInt(entity, 43);
+            int weapon = Engine.GetPDataInt(entity, CsOffsets.ItemId);
             const int specialBitSum = (1 << EngineConst.CswKnife) | (1 << EngineConst.CswHegrenade) | (1 << EngineConst.CswSmokegrenade) | (1 << EngineConst.CswFlashbang) | (1 << EngineConst.CswC4);
             if (((1 << weapon) & specialBitSum) == 0) PlayerStocks.SetUserBpAmmo(id, weapon, WeaponStore.Player(id).GameBpAmmo[weapon]);
             return;
@@ -65,17 +65,17 @@ public static unsafe partial class WeaponDeploy
         }
         else if (WeaponStore.Weapon(id, i).Id != EngineConst.CswHegrenade)
         {
-            if ((Engine.GetPDataInt(entity, 74) & (1 << 2)) != 0 || (Engine.GetPDataInt(entity, 74) & (1 << 0)) != 0)
+            if ((Engine.GetPDataInt(entity, CsOffsets.ItemWeaponState) & (1 << 2)) != 0 || (Engine.GetPDataInt(entity, CsOffsets.ItemWeaponState) & (1 << 0)) != 0)
                 PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).Anim[WpnConst.AnimDrawSilenced]);
             else
                 PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).Anim[WpnConst.AnimDraw]);
         }
-        Engine.SetPDataFloat(pPlayer, 83, WeaponStore.Weapon(id, i).DrawTime);
-        Engine.SetPDataFloat(entity, 46, WeaponStore.Player(id).UserDeploy[0]);
-        Engine.SetPDataFloat(entity, 47, WeaponStore.Player(id).UserDeploy[1]);
+        Engine.SetPDataFloat(pPlayer, CsOffsets.NextAttack, WeaponStore.Weapon(id, i).DrawTime);
+        Engine.SetPDataFloat(entity, CsOffsets.ItemNextPrimaryAttack, WeaponStore.Player(id).UserDeploy[0]);
+        Engine.SetPDataFloat(entity, CsOffsets.ItemNextSecondaryAttack, WeaponStore.Player(id).UserDeploy[1]);
         if (WeaponStore.Weapon(id, i).Clip == 0 && WeaponStore.Weapon(id, i).Id != EngineConst.CswHegrenade && WeaponStore.Weapon(id, i).Id != EngineConst.CswKnife)
         {
-            int clip = Engine.GetPDataInt(entity, 51);
+            int clip = Engine.GetPDataInt(entity, CsOffsets.ItemClip);
             PlayerStocks.SetUserBpAmmo(id, WeaponStore.Weapon(id, i).Id, clip);
             Engine.MessageBegin(EngineConst.MsgOne, Engine.UserMsgId("CurWeapon"), null, pPlayer);
             Engine.WriteByte(1);
@@ -92,14 +92,14 @@ public static unsafe partial class WeaponDeploy
             Engine.MessageBegin(EngineConst.MsgOne, Engine.UserMsgId("CurWeapon"), null, pPlayer);
             Engine.WriteByte(1);
             Engine.WriteByte(WeaponStore.Weapon(id, i).Id);
-            Engine.WriteByte(Engine.GetPDataInt(entity, 51));
+            Engine.WriteByte(Engine.GetPDataInt(entity, CsOffsets.ItemClip));
             Engine.MessageEnd();
         }
         if (WeaponStore.Weapon(id, i).Sight != 0)
         {
-            Engine.SetPDataInt(pPlayer, 363, 90);
+            Engine.SetPDataInt(pPlayer, CsOffsets.Zoom, 90);
             WeaponStore.Player(id).SightMode = WpnConst.Closed;
-            Engine.SetPDataInt(pPlayer, 361, Engine.GetPDataInt(pPlayer, 361) & ~(1 << 6));
+            Engine.SetPDataInt(pPlayer, CsOffsets.ZoomSignal, Engine.GetPDataInt(pPlayer, CsOffsets.ZoomSignal) & ~(1 << 6));
             WeaponStore.Player(id).Reloading = false;
         }
         NativeFunctionRegister.Execute_WpnWeaponDraw(entityIndex, id, i);
@@ -110,20 +110,20 @@ public static unsafe partial class WeaponDeploy
     {
         var entity = Engine.EntOfIndex(entityIndex);
         if (entity == null) return;
-        var pPlayer = Engine.GetPDataCbase(entity, 41);
+        var pPlayer = Engine.GetPDataCbase(entity, CsOffsets.ItemOwner);
         if (pPlayer == null) return;
         int id = Engine.IndexOf(pPlayer);
         int i = WeaponStore.GetWeaponType(entity);
         if (i != 0 && WeaponStore.Weapon(id, i).Sight != 0)
         {
-            Engine.SetPDataInt(pPlayer, 363, 90);
+            Engine.SetPDataInt(pPlayer, CsOffsets.Zoom, 90);
             WeaponStore.Player(id).SightMode = WpnConst.Closed;
-            Engine.SetPDataInt(pPlayer, 361, Engine.GetPDataInt(pPlayer, 361) & ~(1 << 6));
+            Engine.SetPDataInt(pPlayer, CsOffsets.ZoomSignal, Engine.GetPDataInt(pPlayer, CsOffsets.ZoomSignal) & ~(1 << 6));
             WeaponStore.Player(id).Reloading = false;
         }
 
         // 收起武器时记录备用子弹
-        int weapon = Engine.GetPDataInt(entity, 43);
+        int weapon = Engine.GetPDataInt(entity, CsOffsets.ItemId);
         const int specialBitSum = (1 << EngineConst.CswKnife) | (1 << EngineConst.CswHegrenade) | (1 << EngineConst.CswSmokegrenade) | (1 << EngineConst.CswFlashbang) | (1 << EngineConst.CswC4);
         if (((1 << weapon) & specialBitSum) == 0)
         {
@@ -162,13 +162,13 @@ public static unsafe partial class WeaponDeploy
             if (id == 0) return false;
 
             var pPlayer = Engine.EntOfIndex(id);
-            var activeItem = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, 373);
+            var activeItem = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, CsOffsets.ActiveItem);
             if (activeItem == null) return false;
 
             int i = WeaponStore.GetWeaponType(activeItem);
             if (i == 0) return false;
 
-            Engine.SetPDataInt(entity, 11, i);
+            Engine.SetPDataInt(entity, CsOffsets.ItemTemplateSerial, i);
             entity->v.dmgtime = Engine.GameTime + WeaponStore.Weapon(id, i).GrenadeData[1];
             Engine.SetModel(entity, WeaponStore.Weapon(id, i).WModel);
             if (WeaponStore.Weapon(id, i).WModelBody != 0) entity->v.body = WeaponStore.Weapon(id, i).WModelBody;
@@ -180,7 +180,7 @@ public static unsafe partial class WeaponDeploy
         edict_t* weapon = null;
         for (int i = 0; i < 6; i++)
         {
-            weapon = Engine.GetPDataCbase(entity, 34 + i);
+            weapon = Engine.GetPDataCbase(entity, CsOffsets.BoxItem(i));
             if (weapon != null) break;
         }
         if (weapon == null) return false;

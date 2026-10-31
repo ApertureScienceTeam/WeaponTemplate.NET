@@ -7,7 +7,7 @@ namespace Module;
 
 // fakemeta native(pev/engfunc/dllfunc/get_pdata_*) 的 C# 对应物:
 // 引擎经 ModuleRuntime.g_engfuncs,实体数据经 edict->v(entvars_t)与 pvPrivateData 单元读写。
-// 偏移为 Windows 单元偏移(原版 linuxdiff 参数只作用于 Linux,Windows 偏移即原样数值)。
+// pdata 偏移一律使用 CsOffsets 的命名常量(Windows/Linux 双列,运行时按平台取值),禁止写裸数字。
 public static unsafe partial class Engine
 {
     public static enginefuncs_t EF => ModuleRuntime.g_engfuncs;

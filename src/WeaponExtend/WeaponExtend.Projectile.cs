@@ -23,7 +23,7 @@ public static unsafe partial class WeaponExtend
         Span<float> targetOrigin = stackalloc float[3];
         Span<float> velocity = stackalloc float[3];
         int owner = Engine.IndexOf(pev->owner);
-        int i = Engine.GetPDataInt(entity, WeaponIdPData);
+        int i = Engine.GetPDataInt(entity, CsOffsets.ItemTemplateSerial);
         pev->nextthink = Engine.GameTime + 0.01f;
 
         int sprEnt = pev->iuser4;
@@ -243,7 +243,7 @@ public static unsafe partial class WeaponExtend
         var pev = &entity->v;
         Span<float> origin = stackalloc float[3] { pev->origin.x, pev->origin.y, pev->origin.z };
         int owner = Engine.IndexOf(pev->owner);
-        int i = Engine.GetPDataInt(entity, WeaponIdPData);
+        int i = Engine.GetPDataInt(entity, CsOffsets.ItemTemplateSerial);
         int sprEnt = pev->iuser4;
 
         // 碰撞爆炸
@@ -346,7 +346,7 @@ public static unsafe partial class WeaponExtend
         float angleX = pPlayer != null ? -pPlayer->v.v_angle.x : 0.0f;
         float angleY = pPlayer != null ? pPlayer->v.v_angle.y : 0.0f;
         float angleZ = pPlayer != null ? pPlayer->v.v_angle.z : 0.0f;
-        Engine.SetPDataInt(entity, WeaponIdPData, i);
+        Engine.SetPDataInt(entity, CsOffsets.ItemTemplateSerial, i);
         pev->solid = 1; // SOLID_TRIGGER
         entity->v.classname = Engine.AllocStr(className);
         entity->v.globalname = Engine.AllocStr(WpnProjectileName);

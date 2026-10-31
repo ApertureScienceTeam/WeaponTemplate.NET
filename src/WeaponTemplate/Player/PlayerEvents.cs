@@ -34,7 +34,7 @@ public static unsafe partial class PlayerEvents
         if (!Engine.IsBot(id))
         {
             var pPlayer = Engine.EntOfIndex(id);
-            var activeItem = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, 373);
+            var activeItem = pPlayer == null ? null : Engine.GetPDataCbase(pPlayer, CsOffsets.ActiveItem);
             if (!Engine.IsValid(activeItem)) return;
 
             int i = WeaponStore.GetWeaponType(activeItem);

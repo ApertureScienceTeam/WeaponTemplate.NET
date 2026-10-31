@@ -45,7 +45,7 @@ public static unsafe partial class Buy
 
             if (!Buy.CheckBuy(id)) return true;
 
-            var entity = Engine.GetPDataCbase(pPlayer, 368);
+            var entity = Engine.GetPDataCbase(pPlayer, CsOffsets.PrimaryWeapon);
             if (!Engine.IsValid(entity)) return false;
 
             int type = WeaponStore.GetWeaponType(entity);
@@ -64,7 +64,7 @@ public static unsafe partial class Buy
 
             if (!Buy.CheckBuy(id)) return true;
 
-            var entity = Engine.GetPDataCbase(pPlayer, 369);
+            var entity = Engine.GetPDataCbase(pPlayer, CsOffsets.SecondaryWeapon);
             if (!Engine.IsValid(entity)) return false;
 
             int type = WeaponStore.GetWeaponType(entity);
@@ -83,7 +83,7 @@ public static unsafe partial class Buy
 
             if (!Buy.CheckBuy(id)) return true;
 
-            var entity = Engine.GetPDataCbase(pPlayer, 368);
+            var entity = Engine.GetPDataCbase(pPlayer, CsOffsets.PrimaryWeapon);
             if (!Engine.IsValid(entity)) return false;
 
             int type = WeaponStore.GetWeaponType(entity);
@@ -102,7 +102,7 @@ public static unsafe partial class Buy
 
             if (!Buy.CheckBuy(id)) return true;
 
-            var entity = Engine.GetPDataCbase(pPlayer, 369);
+            var entity = Engine.GetPDataCbase(pPlayer, CsOffsets.SecondaryWeapon);
             if (!Engine.IsValid(entity)) return false;
 
             int type = WeaponStore.GetWeaponType(entity);
@@ -123,15 +123,15 @@ public static unsafe partial class Buy
 
             if (!Buy.CheckBuy(id)) return true;
 
-            var entity = Engine.GetPDataCbase(pPlayer, 370);
+            var entity = Engine.GetPDataCbase(pPlayer, CsOffsets.KnifeSlot);
             var newEntity = WeaponGive.GiveWeapon(id, "weapon_knife", 0);
             if (!Engine.IsValid(entity)) entity = newEntity;
             WeaponGive.ChangeWeaponList(id, newEntity);
-            if (Engine.IsValid(entity) && Engine.GetPDataInt(entity, 43) == EngineConst.CswKnife)
+            if (Engine.IsValid(entity) && Engine.GetPDataInt(entity, CsOffsets.ItemId) == EngineConst.CswKnife)
             {
                 HamSandwich.ExecuteHamB(EngineConst.HamItemDeploy, Engine.IndexOf(entity));
                 PlayerStocks.PlayAnim(id, WpnConst.KnifeAnimDraw);
-                Engine.SetPDataFloat(id, 83, 0.7f);
+                Engine.SetPDataFloat(id, CsOffsets.NextAttack, 0.7f);
             }
             return true;
         }
@@ -144,17 +144,17 @@ public static unsafe partial class Buy
 
             if (pPlayer->v.armorvalue >= 100.0f) return true;
 
-            if (Engine.GetPDataInt(pPlayer, 115) < 650)
+            if (Engine.GetPDataInt(pPlayer, CsOffsets.Money) < 650)
             {
                 AmxModX.ClientPrintCenter(id, "#Cstrike_TitlesTXT_Not_Enough_Money");
                 return true;
             }
             pPlayer->v.armorvalue = 100.0f;
-            Engine.SetPDataInt(pPlayer, 112, 1);
+            Engine.SetPDataInt(pPlayer, CsOffsets.ArmorType, 1);
             Engine.MessageBegin(EngineConst.MsgOne, Engine.UserMsgId("ArmorType"), null, pPlayer);
             Engine.WriteByte(0);
             Engine.MessageEnd();
-            PlayerStocks.SetUserMoney(id, Engine.GetPDataInt(pPlayer, 115) - 650);
+            PlayerStocks.SetUserMoney(id, Engine.GetPDataInt(pPlayer, CsOffsets.Money) - 650);
             Engine.EmitSound(pPlayer, EngineConst.ChanItem, "items/ammopickup2.wav", EngineConst.VolNorm, EngineConst.AttnNorm, 1 << 0, EngineConst.PitchNorm);
             return true;
         }
@@ -165,18 +165,18 @@ public static unsafe partial class Buy
 
             if (!Buy.CheckBuy(id)) return true;
 
-            if (pPlayer->v.armorvalue >= 100.0f && Engine.GetPDataInt(pPlayer, 112) == 2) return true;
+            if (pPlayer->v.armorvalue >= 100.0f && Engine.GetPDataInt(pPlayer, CsOffsets.ArmorType) == 2) return true;
 
-            if ((Engine.GetPDataInt(pPlayer, 115) < 1000 && pPlayer->v.armorvalue < 100.0f) ||
-                (Engine.GetPDataInt(pPlayer, 115) < 350 && pPlayer->v.armorvalue >= 100.0f))
+            if ((Engine.GetPDataInt(pPlayer, CsOffsets.Money) < 1000 && pPlayer->v.armorvalue < 100.0f) ||
+                (Engine.GetPDataInt(pPlayer, CsOffsets.Money) < 350 && pPlayer->v.armorvalue >= 100.0f))
             {
                 AmxModX.ClientPrintCenter(id, "#Cstrike_TitlesTXT_Not_Enough_Money");
                 return true;
             }
-            if (Engine.GetPDataInt(pPlayer, 112) == 1) PlayerStocks.SetUserMoney(id, Engine.GetPDataInt(pPlayer, 115) - 350);
-            else PlayerStocks.SetUserMoney(id, Engine.GetPDataInt(pPlayer, 115) - 1000);
+            if (Engine.GetPDataInt(pPlayer, CsOffsets.ArmorType) == 1) PlayerStocks.SetUserMoney(id, Engine.GetPDataInt(pPlayer, CsOffsets.Money) - 350);
+            else PlayerStocks.SetUserMoney(id, Engine.GetPDataInt(pPlayer, CsOffsets.Money) - 1000);
             pPlayer->v.armorvalue = 100.0f;
-            Engine.SetPDataInt(pPlayer, 112, 2);
+            Engine.SetPDataInt(pPlayer, CsOffsets.ArmorType, 2);
             Engine.MessageBegin(EngineConst.MsgOne, Engine.UserMsgId("ArmorType"), null, pPlayer);
             Engine.WriteByte(1);
             Engine.MessageEnd();
@@ -195,25 +195,25 @@ public static unsafe partial class Buy
                 canBuy = true;
             if (!canBuy) return true;
 
-            if (Engine.GetPDataInt(pPlayer, 115) < 200)
+            if (Engine.GetPDataInt(pPlayer, CsOffsets.Money) < 200)
             {
                 AmxModX.ClientPrintCenter(id, "#Cstrike_TitlesTXT_Not_Enough_Money");
                 return true;
             }
-            if (Engine.GetPDataInt(pPlayer, 114) != 2)
+            if (Engine.GetPDataInt(pPlayer, CsOffsets.Team) != 2)
             {
                 AmxModX.ClientPrintCenter(id, "对于你的队伍来说还不能购买\"炸弹拆除装备\"。");
                 return true;
             }
             pPlayer->v.body = 1;
-            int defuseKitSkill = Engine.GetPDataInt(pPlayer, 193);
+            int defuseKitSkill = Engine.GetPDataInt(pPlayer, CsOffsets.DefuseKit);
             if ((defuseKitSkill & (1 << 16)) != 0)
             {
                 AmxModX.ClientPrintCenter(id, "你已经有一个了。");
                 return true;
             }
             defuseKitSkill |= 1 << 16;
-            Engine.SetPDataInt(pPlayer, 193, defuseKitSkill);
+            Engine.SetPDataInt(pPlayer, CsOffsets.DefuseKit, defuseKitSkill);
             Engine.MessageBegin(EngineConst.MsgOne, Engine.UserMsgId("StatusIcon"), null, pPlayer);
             Engine.WriteByte(1);
             Engine.WriteString("defuser");
@@ -221,7 +221,7 @@ public static unsafe partial class Buy
             Engine.WriteByte(160);
             Engine.WriteByte(0);
             Engine.MessageEnd();
-            PlayerStocks.SetUserMoney(id, Engine.GetPDataInt(pPlayer, 115) - 200);
+            PlayerStocks.SetUserMoney(id, Engine.GetPDataInt(pPlayer, CsOffsets.Money) - 200);
             Engine.EmitSound(pPlayer, EngineConst.ChanAuto, "items/gunpickup2.wav", EngineConst.VolNorm, EngineConst.AttnNorm, 0, EngineConst.PitchNorm);
             return true;
         }
@@ -232,20 +232,20 @@ public static unsafe partial class Buy
 
             if (!Buy.CheckBuy(id)) return true;
 
-            if (Engine.GetPDataInt(pPlayer, 115) < 1250)
+            if (Engine.GetPDataInt(pPlayer, CsOffsets.Money) < 1250)
             {
                 AmxModX.ClientPrintCenter(id, "#Cstrike_TitlesTXT_Not_Enough_Money");
                 return true;
             }
-            int nvgKit = Engine.GetPDataInt(pPlayer, 129);
+            int nvgKit = Engine.GetPDataInt(pPlayer, CsOffsets.NVGs);
             if ((nvgKit & (1 << 0)) != 0)
             {
                 AmxModX.ClientPrintCenter(id, "你已经有一个了。");
                 return true;
             }
             nvgKit |= 1 << 0;
-            Engine.SetPDataInt(pPlayer, 129, nvgKit);
-            PlayerStocks.SetUserMoney(id, Engine.GetPDataInt(pPlayer, 115) - 1250);
+            Engine.SetPDataInt(pPlayer, CsOffsets.NVGs, nvgKit);
+            PlayerStocks.SetUserMoney(id, Engine.GetPDataInt(pPlayer, CsOffsets.Money) - 1250);
             return true;
         }
 
@@ -260,12 +260,12 @@ public static unsafe partial class Buy
 
             if (!Buy.CheckBuy(id)) return true;
 
-            if (Engine.GetPDataInt(pPlayer, 114) != GameTables.GameWeaponDefaultTeam[i] && GameTables.GameWeaponDefaultTeam[i] != 0 && WeaponStore.AllTeamBuy == 0)
+            if (Engine.GetPDataInt(pPlayer, CsOffsets.Team) != GameTables.GameWeaponDefaultTeam[i] && GameTables.GameWeaponDefaultTeam[i] != 0 && WeaponStore.AllTeamBuy == 0)
             {
                 AmxModX.ClientPrintCenter(id, $"对于你的队伍来说还不能购买\"{GameTables.GameWeaponBuyCommand[i]}\"。");
                 return true;
             }
-            if (Engine.GetPDataInt(pPlayer, 115) < GameTables.GameWeaponDefaultCost[i])
+            if (Engine.GetPDataInt(pPlayer, CsOffsets.Money) < GameTables.GameWeaponDefaultCost[i])
             {
                 AmxModX.ClientPrintCenter(id, "#Cstrike_TitlesTXT_Not_Enough_Money");
                 return true;
@@ -278,7 +278,7 @@ public static unsafe partial class Buy
                     return true;
                 }
             }
-            else if (command == "flash" && Engine.GetPDataInt(pPlayer, 387) >= 2)
+            else if (command == "flash" && Engine.GetPDataInt(pPlayer, CsOffsets.BpAmmoOffset(EngineConst.CswFlashbang)) >= 2)
             {
                 AmxModX.ClientPrintCenter(id, "#Cstrike_TitlesTXT_Cannot_Carry_Anymore");
                 return true;
@@ -286,7 +286,7 @@ public static unsafe partial class Buy
             var entity = WeaponGive.GiveWeapon(id, GameTables.GameWeaponClassName[i], 0);
             if (Engine.IsValid(entity))
             {
-                PlayerStocks.SetUserMoney(id, Engine.GetPDataInt(pPlayer, 115) - GameTables.GameWeaponDefaultCost[i]);
+                PlayerStocks.SetUserMoney(id, Engine.GetPDataInt(pPlayer, CsOffsets.Money) - GameTables.GameWeaponDefaultCost[i]);
                 if (PlayerStocks.GetUserBpAmmo(id, i) > WeaponStore.GameWeaponMaxBpammo[i]) PlayerStocks.SetUserBpAmmo(id, i, WeaponStore.GameWeaponMaxBpammo[i]);
                 NativeFunctionRegister.Execute_WpnBuyWeaponPost(Engine.IndexOf(entity), id, 0);
             }
@@ -308,23 +308,23 @@ public static unsafe partial class Buy
 
             if (!Buy.CheckBuy(id)) return true;
 
-            if (Engine.GetPDataInt(pPlayer, 114) != WeaponStore.Weapon(id, i).Team && WeaponStore.Weapon(id, i).Team != 0)
+            if (Engine.GetPDataInt(pPlayer, CsOffsets.Team) != WeaponStore.Weapon(id, i).Team && WeaponStore.Weapon(id, i).Team != 0)
             {
                 AmxModX.ClientPrintCenter(id, $"对于你的队伍来说还不能购买\"{WeaponStore.Weapon(id, i).List}\"。");
                 return true;
             }
-            if (Engine.GetPDataInt(pPlayer, 115) < WeaponStore.Weapon(id, i).Cost)
+            if (Engine.GetPDataInt(pPlayer, CsOffsets.Money) < WeaponStore.Weapon(id, i).Cost)
             {
                 AmxModX.ClientPrintCenter(id, "#Cstrike_TitlesTXT_Not_Enough_Money");
                 return true;
             }
-            MF.Log($"[diag] buy '{command}' tpl={i} csw={WeaponStore.Weapon(id, i).Id} cls={GameTables.GameWeaponClassName[WeaponStore.Weapon(id, i).Id]} money={Engine.GetPDataInt(pPlayer, 115)} cost={WeaponStore.Weapon(id, i).Cost}");
+            MF.Log($"[diag] buy '{command}' tpl={i} csw={WeaponStore.Weapon(id, i).Id} cls={GameTables.GameWeaponClassName[WeaponStore.Weapon(id, i).Id]} money={Engine.GetPDataInt(pPlayer, CsOffsets.Money)} cost={WeaponStore.Weapon(id, i).Cost}");
             int entityIndex = WeaponGive.GiveWeaponByTemplate(id, i);
             bool given = WeaponGive.PlayerHasItem(id, entityIndex);
             MF.Log($"[diag] buy give idx={entityIndex} valid={Engine.IsValidIndex(entityIndex)} owned={given}");
             if (given)
             {
-                PlayerStocks.SetUserMoney(id, Engine.GetPDataInt(pPlayer, 115) - WeaponStore.Weapon(id, i).Cost);
+                PlayerStocks.SetUserMoney(id, Engine.GetPDataInt(pPlayer, CsOffsets.Money) - WeaponStore.Weapon(id, i).Cost);
 
                 // 防止备弹超过上限
                 if (PlayerStocks.GetUserBpAmmo(id, WeaponStore.Weapon(id, i).Id) > WeaponStore.Weapon(id, i).Ammo &&

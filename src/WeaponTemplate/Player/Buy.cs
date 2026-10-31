@@ -16,7 +16,7 @@ public static unsafe partial class Buy
         var pPlayer = Engine.EntOfIndex(id);
         if (pPlayer == null) return;
 
-        WeaponStore.Player(id).BotMoney += Engine.GetPDataInt(pPlayer, 115);
+        WeaponStore.Player(id).BotMoney += Engine.GetPDataInt(pPlayer, CsOffsets.Money);
         if (WeaponStore.Player(id).BotMoney > WeaponStore.MaxMoney) WeaponStore.Player(id).BotMoney = WeaponStore.MaxMoney;
         PlayerStocks.SetUserMoney(id, 0);
 
@@ -35,7 +35,7 @@ public static unsafe partial class Buy
 
         for (int i = 0; i < 2; i++)
         {
-            var entity = Engine.GetPDataCbase(pPlayer, 368 + i);
+            var entity = Engine.GetPDataCbase(pPlayer, CsOffsets.PlayerSlot(i + 1));
             if (Engine.IsValid(entity)) weaponBySlot[i] = WeaponStore.GetWeaponType(entity);
         }
 
@@ -48,7 +48,7 @@ public static unsafe partial class Buy
             {
                 WeaponStore.Player(id).BotMoney -= 1000;
                 pPlayer->v.armorvalue = 100.0f;
-                Engine.SetPDataInt(pPlayer, 112, 2);
+                Engine.SetPDataInt(pPlayer, CsOffsets.ArmorType, 2);
                 Engine.MessageBegin(EngineConst.MsgOne, Engine.UserMsgId("ArmorType"), null, pPlayer);
                 Engine.WriteByte(1);
                 Engine.MessageEnd();
@@ -56,7 +56,7 @@ public static unsafe partial class Buy
             }
         }
 
-        if (WeaponStore.Player(id).BotMoney >= 200 && Engine.GetPDataInt(pPlayer, 114) == 2)
+        if (WeaponStore.Player(id).BotMoney >= 200 && Engine.GetPDataInt(pPlayer, CsOffsets.Team) == 2)
         {
             specialWeapon1 = WpnConst.SwDefuser;
             specialWeapon0 = 0;
@@ -67,11 +67,11 @@ public static unsafe partial class Buy
             if (postResult != WpnConst.WPN_SUPERCEDE && canBuy && Buy.CheckBuy(id))
             {
                 pPlayer->v.body = 1;
-                int defuseKitSkill = Engine.GetPDataInt(pPlayer, 193);
+                int defuseKitSkill = Engine.GetPDataInt(pPlayer, CsOffsets.DefuseKit);
                 if ((defuseKitSkill & (1 << 16)) == 0)
                 {
                     defuseKitSkill |= 1 << 16;
-                    Engine.SetPDataInt(pPlayer, 193, defuseKitSkill);
+                    Engine.SetPDataInt(pPlayer, CsOffsets.DefuseKit, defuseKitSkill);
                     Engine.MessageBegin(EngineConst.MsgOne, Engine.UserMsgId("StatusIcon"), null, pPlayer);
                     Engine.WriteByte(1);
                     Engine.WriteString("defuser");
@@ -112,7 +112,7 @@ public static unsafe partial class Buy
                 }
                 if (WeaponStore.Weapon(id, i).BuyCommand == "empty") continue;
                 if (!Buy.CheckBuy(id)) continue;
-                if (Engine.GetPDataInt(pPlayer, 114) != WeaponStore.Weapon(id, i).Team && WeaponStore.Weapon(id, i).Team != 0) continue;
+                if (Engine.GetPDataInt(pPlayer, CsOffsets.Team) != WeaponStore.Weapon(id, i).Team && WeaponStore.Weapon(id, i).Team != 0) continue;
                 if (WeaponStore.Player(id).BotMoney < WeaponStore.Weapon(id, i).Cost) continue;
                 if ((j == 0 && weaponBySlot[0] != 0) || (j == 1 && weaponBySlot[1] != 0)) continue;
                 if (WeaponAmmo.GetWeaponSlot(id, i, j + 1))
@@ -160,7 +160,7 @@ public static unsafe partial class Buy
         var p = Engine.EntOfIndex(id);
         if (p == null) return false;
 
-        if ((Engine.GetPDataInt(p, 235) & (1 << 0)) == 0 && !Engine.IsBot(id)) return false;
+        if ((Engine.GetPDataInt(p, CsOffsets.CanBuy) & (1 << 0)) == 0 && !Engine.IsBot(id)) return false;
         if (Engine.IsBot(id) && !WeaponStore.Player(id).BotBuyWeapon) return false;
 
         if (Engine.GameTime > WeaponStore.DisableBuyTime)

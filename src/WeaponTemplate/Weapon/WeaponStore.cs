@@ -63,7 +63,7 @@ public static unsafe class WeaponStore
     public static int GetWeaponType(edict_t* ent)
     {
         if (!Engine.IsValid(ent)) return 0;
-        int serial = Engine.GetPDataInt(ent, 11);
+        int serial = Engine.GetPDataInt(ent, CsOffsets.ItemTemplateSerial);
         return serial >= 1 && serial <= WeaponAmount ? serial : 0;
     }
 

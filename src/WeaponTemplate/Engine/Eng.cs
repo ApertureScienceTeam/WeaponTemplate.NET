@@ -8,7 +8,7 @@ namespace Module;
 // fakemeta native(pev/engfunc/dllfunc/get_pdata_*) 的 C# 对应物:
 // 引擎经 ModuleRuntime.g_engfuncs,实体数据经 edict->v(entvars_t)与 pvPrivateData 单元读写。
 // 偏移为 Windows 单元偏移(原版 linuxdiff 参数只作用于 Linux,Windows 偏移即原样数值)。
-public static unsafe class Eng
+public static unsafe partial class Eng
 {
     public static enginefuncs_t EF => ModuleRuntime.g_engfuncs;
     public static globalvars_t* GP => ModuleRuntime.gpGlobals;
@@ -144,10 +144,10 @@ public static unsafe class Eng
     public static int PrecacheModel(string path) => EngineResources.PrecacheModel(path);
     public static int PrecacheSound(string path) => EngineResources.PrecacheSound(path);
 
-    // ExecuteHamB 的前两个参数按值,any:... 后的标量按 Pawn 地址传递。
+    // HamSandwich.ExecuteHamB(Ham_TakeDamage) 的标量参数按 Pawn 地址传递,回调内可修改(SetHamParamFloat 依赖这一点)。
     public static void TakeDamage(int victim, int inflictor, int attacker, float damage, int damageType)
-        => MF.CallNative("ExecuteHamB", EngineConst.HamTakeDamage, victim,
-            MF.Ref(inflictor), MF.Ref(attacker), MF.Ref(damage), MF.Ref(damageType));
+        => HamSandwich.ExecuteHamB(EngineConst.HamTakeDamage, victim,
+            ref inflictor, ref attacker, ref damage, ref damageType);
 
     public static void SetModel(edict_t* ent, string model)
     {
@@ -252,11 +252,11 @@ public static unsafe class Eng
     // ---- 玩家中心文字(client_print print_center;文本经 TextMsg 消息下发) ----
 
     public static void ClientPrintCenter(int id, string message)
-        => MF.CallNative("client_print", id, EngineConst.PrintCenter, message);
+        => AmxModX.ClientPrint(id, EngineConst.PrintCenter, message);
 
     public static void EngClientCommand(int id, string command, string? argument = null)
     {
-        if (argument == null) MF.CallNative("engclient_cmd", id, command);
-        else MF.CallNative("engclient_cmd", id, command, argument);
+        if (argument == null) AmxModX.EngClientCmd(id, command);
+        else AmxModX.EngClientCmd(id, command, argument);
     }
 }

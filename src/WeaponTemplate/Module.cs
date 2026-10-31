@@ -15,7 +15,7 @@ public static partial class Module
     {
         ModuleRuntime.OnAmxxAttach = () => MF.Log("加枪模板模块已加载 (WeaponTemplate v1.38, C# 移植版)");
         // 插件(含 bridge)每加载/重载一轮都会走到这里,作为注册轮次的起点
-        ModuleRuntime.OnPluginsLoaded = Callbacks.ArmRegister;
+        ModuleRuntime.OnPluginsLoaded = PluginLifecycle.ArmRegister;
         ModuleRuntime.OnPluginsUnloading = () => MF.Log("[diag] plugins unloading");
         ModuleRuntime.OnPluginsUnloaded = () => MF.Log("[diag] plugins unloaded");
     }

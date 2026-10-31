@@ -11,19 +11,19 @@ public static unsafe class Buy
         if (!Eng.IsAlive(id)) return;
         if (!Eng.IsBot(id)) return;
 
-        if (!Store.Player(id).BotBuyWeapon) return;
+        if (!WeaponStore.Player(id).BotBuyWeapon) return;
 
         var pPlayer = Eng.EntOfIndex(id);
         if (pPlayer == null) return;
 
-        Store.Player(id).BotMoney += Eng.GetPDataInt(pPlayer, 115);
-        if (Store.Player(id).BotMoney > Store.MaxMoney) Store.Player(id).BotMoney = Store.MaxMoney;
-        Core.SetUserMoney(id, 0);
+        WeaponStore.Player(id).BotMoney += Eng.GetPDataInt(pPlayer, 115);
+        if (WeaponStore.Player(id).BotMoney > WeaponStore.MaxMoney) WeaponStore.Player(id).BotMoney = WeaponStore.MaxMoney;
+        PlayerStocks.SetUserMoney(id, 0);
 
         int result = NativeFunctionRegister.Execute_WpnBotBuyWeapon(id);
         if (result == WpnConst.WPN_SUPERCEDE)
         {
-            Store.Player(id).BotBuyWeapon = false;
+            WeaponStore.Player(id).BotBuyWeapon = false;
             return;
         }
 
@@ -36,17 +36,17 @@ public static unsafe class Buy
         for (int i = 0; i < 2; i++)
         {
             var entity = Eng.GetPDataCbase(pPlayer, 368 + i);
-            if (Eng.IsValid(entity)) weaponBySlot[i] = Store.GetWeaponType(entity);
+            if (Eng.IsValid(entity)) weaponBySlot[i] = WeaponStore.GetWeaponType(entity);
         }
 
-        if (Store.Player(id).BotMoney >= 1000)
+        if (WeaponStore.Player(id).BotMoney >= 1000)
         {
             specialWeapon1 = WpnConst.SwVesthelm;
             specialWeapon0 = 0;
             int postResult = NativeFunctionRegister.Execute_WpnBotBuyWeaponPost(id, specialWeapon0, specialWeapon1);
-            if (postResult != WpnConst.WPN_SUPERCEDE && Core.CheckBuy(id))
+            if (postResult != WpnConst.WPN_SUPERCEDE && Buy.CheckBuy(id))
             {
-                Store.Player(id).BotMoney -= 1000;
+                WeaponStore.Player(id).BotMoney -= 1000;
                 pPlayer->v.armorvalue = 100.0f;
                 Eng.SetPDataInt(pPlayer, 112, 2);
                 Eng.MessageBegin(EngineConst.MsgOne, Eng.UserMsgId("ArmorType"), null, pPlayer);
@@ -56,7 +56,7 @@ public static unsafe class Buy
             }
         }
 
-        if (Store.Player(id).BotMoney >= 200 && Eng.GetPDataInt(pPlayer, 114) == 2)
+        if (WeaponStore.Player(id).BotMoney >= 200 && Eng.GetPDataInt(pPlayer, 114) == 2)
         {
             specialWeapon1 = WpnConst.SwDefuser;
             specialWeapon0 = 0;
@@ -64,7 +64,7 @@ public static unsafe class Buy
             bool canBuy = false;
             for (var found = Eng.FindEntityByString(null, "classname", "func_bomb_target"); found != null; found = Eng.FindEntityByString(found, "classname", "func_bomb_target"))
                 canBuy = true;
-            if (postResult != WpnConst.WPN_SUPERCEDE && canBuy && Core.CheckBuy(id))
+            if (postResult != WpnConst.WPN_SUPERCEDE && canBuy && Buy.CheckBuy(id))
             {
                 pPlayer->v.body = 1;
                 int defuseKitSkill = Eng.GetPDataInt(pPlayer, 193);
@@ -79,20 +79,20 @@ public static unsafe class Buy
                     Eng.WriteByte(160);
                     Eng.WriteByte(0);
                     Eng.MessageEnd();
-                    Store.Player(id).BotMoney -= 200;
+                    WeaponStore.Player(id).BotMoney -= 200;
                     Eng.EmitSound(pPlayer, EngineConst.ChanAuto, "items/gunpickup2.wav", EngineConst.VolNorm, EngineConst.AttnNorm, 0, EngineConst.PitchNorm);
                 }
             }
         }
 
         // 主/副/刀/雷 四个槽位的模板武器选择
-        var slotCandidates = new int[4, Store.WeaponAmount + 1];
+        var slotCandidates = new int[4, WeaponStore.WeaponAmount + 1];
         var slotCount = new int[4];
         for (int j = 0; j < 4; j++)
         {
-            for (int i = 1; i <= Store.WeaponAmount + 1; i++)
+            for (int i = 1; i <= WeaponStore.WeaponAmount + 1; i++)
             {
-                if (i > Store.WeaponAmount)
+                if (i > WeaponStore.WeaponAmount)
                 {
                     if (slotCount[j] != 0)
                     {
@@ -103,19 +103,19 @@ public static unsafe class Buy
                         int postResult = NativeFunctionRegister.Execute_WpnBotBuyWeaponPost(id, specialWeapon0, specialWeapon1);
                         if (postResult != WpnConst.WPN_SUPERCEDE)
                         {
-                            Core.GiveWeaponByTemplate(id, wpnId);
-                            Store.Player(id).BotMoney -= Store.Weapon(id, wpnId).Cost;
-                            if (j < 2) Core.SetUserBpAmmo(id, Store.Weapon(id, wpnId).Id, Store.Weapon(id, wpnId).Ammo);
+                            WeaponGive.GiveWeaponByTemplate(id, wpnId);
+                            WeaponStore.Player(id).BotMoney -= WeaponStore.Weapon(id, wpnId).Cost;
+                            if (j < 2) PlayerStocks.SetUserBpAmmo(id, WeaponStore.Weapon(id, wpnId).Id, WeaponStore.Weapon(id, wpnId).Ammo);
                         }
                     }
                     break;
                 }
-                if (Store.Weapon(id, i).BuyCommand == "empty") continue;
-                if (!Core.CheckBuy(id)) continue;
-                if (Eng.GetPDataInt(pPlayer, 114) != Store.Weapon(id, i).Team && Store.Weapon(id, i).Team != 0) continue;
-                if (Store.Player(id).BotMoney < Store.Weapon(id, i).Cost) continue;
+                if (WeaponStore.Weapon(id, i).BuyCommand == "empty") continue;
+                if (!Buy.CheckBuy(id)) continue;
+                if (Eng.GetPDataInt(pPlayer, 114) != WeaponStore.Weapon(id, i).Team && WeaponStore.Weapon(id, i).Team != 0) continue;
+                if (WeaponStore.Player(id).BotMoney < WeaponStore.Weapon(id, i).Cost) continue;
                 if ((j == 0 && weaponBySlot[0] != 0) || (j == 1 && weaponBySlot[1] != 0)) continue;
-                if (Core.GetWeaponSlot(id, i, j + 1))
+                if (WeaponAmmo.GetWeaponSlot(id, i, j + 1))
                 {
                     slotCount[j]++;
                     slotCandidates[j, slotCount[j]] = i;
@@ -126,27 +126,53 @@ public static unsafe class Buy
         // 手雷/烟雾/闪光
         for (int i = 0; i < 3; i++)
         {
-            if (Store.Player(id).BotMoney >= grenadeCost[i])
+            if (WeaponStore.Player(id).BotMoney >= grenadeCost[i])
             {
                 if ((pPlayer->v.weapons & (1 << grenadeId[i])) != 0) continue;
-                if (!Core.CheckBuy(id)) continue;
+                if (!Buy.CheckBuy(id)) continue;
 
                 specialWeapon1 = WpnConst.SwHegrenade + i;
                 specialWeapon0 = 0;
                 int postResult = NativeFunctionRegister.Execute_WpnBotBuyWeaponPost(id, specialWeapon0, specialWeapon1);
                 if (postResult != WpnConst.WPN_SUPERCEDE)
                 {
-                    Core.GiveWeapon(id, grenadeName[i], 0);
-                    Store.Player(id).BotMoney -= grenadeCost[i];
+                    WeaponGive.GiveWeapon(id, grenadeName[i], 0);
+                    WeaponStore.Player(id).BotMoney -= grenadeCost[i];
                 }
             }
         }
 
         if (slotCount[0] == 0 && slotCount[1] == 0 && weaponBySlot[0] == 0 && weaponBySlot[1] == 0)
         {
-            Core.SetUserMoney(id, Store.Player(id).BotMoney);
-            Store.Player(id).BotMoney = 0;
+            PlayerStocks.SetUserMoney(id, WeaponStore.Player(id).BotMoney);
+            WeaponStore.Player(id).BotMoney = 0;
         }
-        Store.Player(id).BotBuyWeapon = false;
+        WeaponStore.Player(id).BotBuyWeapon = false;
+    }
+
+    // public CheckBuy(id)
+    public static bool CheckBuy(int id)
+    {
+        if (WeaponStore.Player(id).BlockBuy == WpnConst.BuyCannot) return false;
+        if (WeaponStore.Player(id).BlockBuy == WpnConst.BuyEverywhere && Eng.IsAlive(id)) return true;
+        if (!Eng.IsAlive(id)) return false;
+
+        var p = Eng.EntOfIndex(id);
+        if (p == null) return false;
+
+        if ((Eng.GetPDataInt(p, 235) & (1 << 0)) == 0 && !Eng.IsBot(id)) return false;
+        if (Eng.IsBot(id) && !WeaponStore.Player(id).BotBuyWeapon) return false;
+
+        if (Eng.GameTime > WeaponStore.DisableBuyTime)
+        {
+            int seconds = PawnMath.Round(Eng.CvarFloat("mp_buytime") * 60.0f);
+            Eng.MessageBegin(EngineConst.MsgOne, Eng.UserMsgId("TextMsg"), null, p);
+            Eng.WriteByte(1 << 2);
+            Eng.WriteString("#Cant_buy");
+            Eng.WriteString(seconds.ToString());
+            Eng.MessageEnd();
+            return false;
+        }
+        return true;
     }
 }

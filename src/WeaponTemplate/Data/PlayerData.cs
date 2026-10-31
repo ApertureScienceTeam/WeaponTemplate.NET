@@ -1,6 +1,6 @@
 namespace Module;
 
-// 单个玩家的运行时数据。只有真正进过服的玩家才会被创建(Store.Player),
+// 单个玩家的运行时数据。只有真正进过服的玩家才会被创建(WeaponStore.Player),
 // 按模板序号索引的数组只开到当前模板数,模板注册后再扩容。
 public sealed class PlayerData
 {

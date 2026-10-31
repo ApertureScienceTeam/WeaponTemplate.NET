@@ -22,7 +22,7 @@ public static unsafe class Attack
 
         if (damageType == WpnConst.DmgTypeSector || damageType == WpnConst.DmgTypeLine)
         {
-            if (Eng.IsConnected(attacker) && Store.Player(attacker).AttackHitGroup != 0) hit = Store.Player(attacker).AttackHitGroup;
+            if (Eng.IsConnected(attacker) && WeaponStore.Player(attacker).AttackHitGroup != 0) hit = WeaponStore.Player(attacker).AttackHitGroup;
             switch (hit)
             {
                 case EngineConst.HitHead: damage *= 4.0f; break;
@@ -33,7 +33,7 @@ public static unsafe class Attack
                 case EngineConst.HitRightLeg:
                 case EngineConst.HitLeftLeg: damage *= 0.75f; break;
             }
-            Core.SpawnBlood(origin, Store.BloodColor, PawnMath.Round(damage));
+            Effects.SpawnBlood(origin, WeaponStore.BloodColor, PawnMath.Round(damage));
         }
         Eng.SetPDataInt(pVictim, 75, hit);
         Eng.TakeDamage(victim, Eng.IndexOf(entity), attacker, damage, EngineConst.DmgNeverGib | EngineConst.DmgBullet);
@@ -63,7 +63,7 @@ public static unsafe class Attack
         viewOfs[0] = pAttacker->v.view_ofsr[0];
         viewOfs[1] = pAttacker->v.view_ofsr[1];
         viewOfs[2] = pAttacker->v.view_ofsr[2];
-        Core.VecAdd(origin, viewOfs, origin);
+        VectorMath.VecAdd(origin, viewOfs, origin);
 
         int hitWhat = WpnConst.HitEmpty;
 
@@ -90,7 +90,7 @@ public static unsafe class Attack
                         if (!rightSide) number[0]++;
                         float fRight = (rightSide ? 1.0f : -1.0f) * number[0] * angleOffset;
                         float fUp = (upSide ? 1.0f : -1.0f) * number[1] * heightOffset;
-                        Core.GetPosition(attacker, range, fRight, fUp, targetOrigin);
+                        VectorMath.GetPosition(attacker, range, fRight, fUp, targetOrigin);
 
                         TraceResult trace = default;
                         Eng.TraceLine(origin, targetOrigin, 0 /* DONT_IGNORE_MONSTERS */, pAttacker, &trace);
@@ -126,7 +126,7 @@ public static unsafe class Attack
                                 if (className == "hostage_entity" || className == "monster_scientist")
                                 {
                                     hitWhat = WpnConst.HitPlayer;
-                                    Core.SpawnBlood(hitOrigin, Store.BloodColor, PawnMath.Round(damage));
+                                    Effects.SpawnBlood(hitOrigin, WeaponStore.BloodColor, PawnMath.Round(damage));
                                 }
                                 Eng.SetPDataFloat(pHit2, 15, Eng.GameTime);
                                 Eng.TakeDamage(pHit, Eng.IndexOf(entity), attacker, damage, EngineConst.DmgNeverGib | EngineConst.DmgBullet);
@@ -142,8 +142,8 @@ public static unsafe class Attack
             }
             case WpnConst.DmgTypeLine:
             {
-                Core.GetAimOrigin(attacker, hitOrigin);
-                Core.GetPosition(attacker, range, 0.0f, 0.0f, targetOrigin);
+                VectorMath.GetAimOrigin(attacker, hitOrigin);
+                VectorMath.GetPosition(attacker, range, 0.0f, 0.0f, targetOrigin);
 
                 TraceResult trace = default;
                 Eng.TraceLine(origin, targetOrigin, 0, pAttacker, &trace);
@@ -174,7 +174,7 @@ public static unsafe class Attack
                             if (className == "hostage_entity" || className == "monster_scientist")
                             {
                                 hitWhat = WpnConst.HitPlayer;
-                                Core.SpawnBlood(hitOrigin, Store.BloodColor, PawnMath.Round(damage));
+                                Effects.SpawnBlood(hitOrigin, WeaponStore.BloodColor, PawnMath.Round(damage));
                             }
                             Eng.TakeDamage(pHit, Eng.IndexOf(entity), attacker, damage, EngineConst.DmgNeverGib | EngineConst.DmgBullet);
                         }
@@ -236,7 +236,7 @@ public static unsafe class Attack
                         if (className == "hostage_entity" || className == "monster_scientist")
                         {
                             hitWhat = WpnConst.HitPlayer;
-                            Core.SpawnBlood(origin, Store.BloodColor, PawnMath.Round(damage));
+                            Effects.SpawnBlood(origin, WeaponStore.BloodColor, PawnMath.Round(damage));
                         }
                         Eng.TakeDamage(pHit, Eng.IndexOf(entity), attacker, damage, EngineConst.DmgNeverGib | EngineConst.DmgBullet);
                     }
@@ -255,23 +255,23 @@ public static unsafe class Attack
 
         if (style == 1)
         {
-            if (Store.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimSlashBegin] != 0)
+            if (WeaponStore.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimSlashBegin] != 0)
             {
-                Core.PlayAnim(id, Store.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimSlashBegin]);
-                Eng.SetPDataFloat(entity, 46, Store.Weapon(id, i).KnifeSlashTime);
-                Eng.SetPDataFloat(entity, 47, Store.Weapon(id, i).KnifeSlashTime);
-                Eng.SetPDataFloat(entity, 48, Store.Weapon(id, i).KnifeSlashTime);
-                Eng.SetPDataFloat(id, 83, Store.Weapon(id, i).KnifeSlashTime);
-                Store.Player(id).PlayerThink = Eng.GameTime + Store.Weapon(id, i).KnifeSlashTime;
+                PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimSlashBegin]);
+                Eng.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).KnifeSlashTime);
+                Eng.SetPDataFloat(entity, 47, WeaponStore.Weapon(id, i).KnifeSlashTime);
+                Eng.SetPDataFloat(entity, 48, WeaponStore.Weapon(id, i).KnifeSlashTime);
+                Eng.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).KnifeSlashTime);
+                WeaponStore.Player(id).PlayerThink = Eng.GameTime + WeaponStore.Weapon(id, i).KnifeSlashTime;
             }
             else
             {
-                Core.PlayAnim(id, Store.Weapon(id, i).KnifeAnim[Store.Player(id).KnifeSlashMode + 1]);
-                Eng.SetPDataFloat(entity, 46, Store.Weapon(id, i).KnifeSlashTime + Store.Weapon(id, i).KnifeSlashResetTime);
-                Eng.SetPDataFloat(entity, 47, Store.Weapon(id, i).KnifeSlashTime + Store.Weapon(id, i).KnifeSlashResetTime);
-                Eng.SetPDataFloat(entity, 48, Store.Weapon(id, i).KnifeSlashTime + Store.Weapon(id, i).KnifeSlashResetTime);
-                Eng.SetPDataFloat(id, 83, Store.Weapon(id, i).KnifeSlashTime + Store.Weapon(id, i).KnifeSlashResetTime);
-                Store.Player(id).PlayerThink = Eng.GameTime + Store.Weapon(id, i).KnifeSlashTime;
+                PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).KnifeAnim[WeaponStore.Player(id).KnifeSlashMode + 1]);
+                Eng.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).KnifeSlashTime + WeaponStore.Weapon(id, i).KnifeSlashResetTime);
+                Eng.SetPDataFloat(entity, 47, WeaponStore.Weapon(id, i).KnifeSlashTime + WeaponStore.Weapon(id, i).KnifeSlashResetTime);
+                Eng.SetPDataFloat(entity, 48, WeaponStore.Weapon(id, i).KnifeSlashTime + WeaponStore.Weapon(id, i).KnifeSlashResetTime);
+                Eng.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).KnifeSlashTime + WeaponStore.Weapon(id, i).KnifeSlashResetTime);
+                WeaponStore.Player(id).PlayerThink = Eng.GameTime + WeaponStore.Weapon(id, i).KnifeSlashTime;
             }
         }
         else if (style == 2)
@@ -279,9 +279,9 @@ public static unsafe class Attack
             int result = NativeFunctionRegister.Execute_WpnPrimaryAttackEnd(Eng.IndexOf(entity), id, i);
             if (result == WpnConst.WPN_SUPERCEDE) return;
 
-            float range = Store.Weapon(id, i).KnifeSlashRange;
-            float damage = 15.0f * Store.Weapon(id, i).Damage;
-            float angle = Store.Weapon(id, i).KnifeSlashAngle;
+            float range = WeaponStore.Weapon(id, i).KnifeSlashRange;
+            float damage = 15.0f * WeaponStore.Weapon(id, i).Damage;
+            float angle = WeaponStore.Weapon(id, i).KnifeSlashAngle;
             Span<float> origin = stackalloc float[3];
             var pPlayer = Eng.EntOfIndex(id)!;
             origin[0] = pPlayer->v.origin.x; origin[1] = pPlayer->v.origin.y; origin[2] = pPlayer->v.origin.z;
@@ -289,53 +289,53 @@ public static unsafe class Attack
             Span<float> param = stackalloc float[6];
             param[0] = range;
             param[1] = angle;
-            param[2] = Store.Weapon(id, i).KnifeSlashAngleOffset;
-            param[3] = Store.Weapon(id, i).KnifeSlashHeight;
-            param[4] = Store.Weapon(id, i).KnifeSlashHeightOffset;
+            param[2] = WeaponStore.Weapon(id, i).KnifeSlashAngleOffset;
+            param[3] = WeaponStore.Weapon(id, i).KnifeSlashHeight;
+            param[4] = WeaponStore.Weapon(id, i).KnifeSlashHeightOffset;
             param[5] = damage;
             int hit = CheckAttack(id, 0, entity, param, origin, angle != 0.0f ? WpnConst.DmgTypeSector : WpnConst.DmgTypeLine, WpnConst.SpdmgNormal);
             if (hit == WpnConst.HitEmpty)
             {
-                Eng.EmitSound(entity, EngineConst.ChanWeapon, Store.Weapon(id, i).Sound3, EngineConst.VolNorm, Store.Weapon(id, i).KnifeSoundVolume[1], 0, EngineConst.PitchNorm);
-                if (Store.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimSlashBegin] != 0) Core.PlayAnim(id, Store.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimMidSlashMiss]);
+                Eng.EmitSound(entity, EngineConst.ChanWeapon, WeaponStore.Weapon(id, i).Sound3, EngineConst.VolNorm, WeaponStore.Weapon(id, i).KnifeSoundVolume[1], 0, EngineConst.PitchNorm);
+                if (WeaponStore.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimSlashBegin] != 0) PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimMidSlashMiss]);
             }
             if (hit == WpnConst.HitPlayer)
             {
-                if (Store.Player(id).KnifeSlashMode != 0) Eng.EmitSound(entity, EngineConst.ChanWeapon, Store.Weapon(id, i).Sound5, EngineConst.VolNorm, Store.Weapon(id, i).KnifeSoundVolume[3], 0, EngineConst.PitchNorm);
-                else Eng.EmitSound(entity, EngineConst.ChanWeapon, Store.Weapon(id, i).Sound6, EngineConst.VolNorm, Store.Weapon(id, i).KnifeSoundVolume[4], 0, EngineConst.PitchNorm);
-                if (Store.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimSlashBegin] != 0) Core.PlayAnim(id, Store.Weapon(id, i).KnifeAnim[Store.Player(id).KnifeSlashMode + 1]);
+                if (WeaponStore.Player(id).KnifeSlashMode != 0) Eng.EmitSound(entity, EngineConst.ChanWeapon, WeaponStore.Weapon(id, i).Sound5, EngineConst.VolNorm, WeaponStore.Weapon(id, i).KnifeSoundVolume[3], 0, EngineConst.PitchNorm);
+                else Eng.EmitSound(entity, EngineConst.ChanWeapon, WeaponStore.Weapon(id, i).Sound6, EngineConst.VolNorm, WeaponStore.Weapon(id, i).KnifeSoundVolume[4], 0, EngineConst.PitchNorm);
+                if (WeaponStore.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimSlashBegin] != 0) PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).KnifeAnim[WeaponStore.Player(id).KnifeSlashMode + 1]);
             }
             if (hit == WpnConst.HitEntity || hit == WpnConst.HitWall)
             {
-                Eng.EmitSound(entity, EngineConst.ChanWeapon, Store.Weapon(id, i).Sound2, EngineConst.VolNorm, Store.Weapon(id, i).KnifeSoundVolume[0], 0, EngineConst.PitchNorm);
-                if (Store.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimSlashBegin] != 0) Core.PlayAnim(id, Store.Weapon(id, i).KnifeAnim[Store.Player(id).KnifeSlashMode + 1]);
+                Eng.EmitSound(entity, EngineConst.ChanWeapon, WeaponStore.Weapon(id, i).Sound2, EngineConst.VolNorm, WeaponStore.Weapon(id, i).KnifeSoundVolume[0], 0, EngineConst.PitchNorm);
+                if (WeaponStore.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimSlashBegin] != 0) PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).KnifeAnim[WeaponStore.Player(id).KnifeSlashMode + 1]);
             }
-            Eng.SetPDataFloat(entity, 46, Store.Weapon(id, i).KnifeSlashResetTime);
-            Eng.SetPDataFloat(entity, 47, Store.Weapon(id, i).KnifeSlashResetTime);
-            Eng.SetPDataFloat(entity, 48, Store.Weapon(id, i).KnifeSlashResetTime);
-            Eng.SetPDataFloat(id, 83, Store.Weapon(id, i).KnifeSlashResetTime);
-            Store.Player(id).PlayerThink = Eng.GameTime + Store.Weapon(id, i).KnifeSlashResetTime;
+            Eng.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).KnifeSlashResetTime);
+            Eng.SetPDataFloat(entity, 47, WeaponStore.Weapon(id, i).KnifeSlashResetTime);
+            Eng.SetPDataFloat(entity, 48, WeaponStore.Weapon(id, i).KnifeSlashResetTime);
+            Eng.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).KnifeSlashResetTime);
+            WeaponStore.Player(id).PlayerThink = Eng.GameTime + WeaponStore.Weapon(id, i).KnifeSlashResetTime;
             NativeFunctionRegister.Execute_WpnPrimaryAttackEndPost(Eng.IndexOf(entity), id, i);
         }
         else if (style == 3)
         {
-            if (Store.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStabBegin] != 0)
+            if (WeaponStore.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStabBegin] != 0)
             {
-                Core.PlayAnim(id, Store.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStabBegin]);
-                Eng.SetPDataFloat(entity, 46, Store.Weapon(id, i).KnifeStabTime);
-                Eng.SetPDataFloat(entity, 47, Store.Weapon(id, i).KnifeStabTime);
-                Eng.SetPDataFloat(entity, 48, Store.Weapon(id, i).KnifeStabTime);
-                Eng.SetPDataFloat(id, 83, Store.Weapon(id, i).KnifeStabTime);
-                Store.Player(id).PlayerThink = Eng.GameTime + Store.Weapon(id, i).KnifeStabTime;
+                PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStabBegin]);
+                Eng.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).KnifeStabTime);
+                Eng.SetPDataFloat(entity, 47, WeaponStore.Weapon(id, i).KnifeStabTime);
+                Eng.SetPDataFloat(entity, 48, WeaponStore.Weapon(id, i).KnifeStabTime);
+                Eng.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).KnifeStabTime);
+                WeaponStore.Player(id).PlayerThink = Eng.GameTime + WeaponStore.Weapon(id, i).KnifeStabTime;
             }
             else
             {
-                Core.PlayAnim(id, Store.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStab]);
-                Eng.SetPDataFloat(entity, 46, Store.Weapon(id, i).KnifeStabTime + Store.Weapon(id, i).KnifeStabResetTime);
-                Eng.SetPDataFloat(entity, 47, Store.Weapon(id, i).KnifeStabTime + Store.Weapon(id, i).KnifeStabResetTime);
-                Eng.SetPDataFloat(entity, 48, Store.Weapon(id, i).KnifeStabTime + Store.Weapon(id, i).KnifeStabResetTime);
-                Eng.SetPDataFloat(id, 83, Store.Weapon(id, i).KnifeStabTime + Store.Weapon(id, i).KnifeStabResetTime);
-                Store.Player(id).PlayerThink = Eng.GameTime + Store.Weapon(id, i).KnifeStabTime;
+                PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStab]);
+                Eng.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).KnifeStabTime + WeaponStore.Weapon(id, i).KnifeStabResetTime);
+                Eng.SetPDataFloat(entity, 47, WeaponStore.Weapon(id, i).KnifeStabTime + WeaponStore.Weapon(id, i).KnifeStabResetTime);
+                Eng.SetPDataFloat(entity, 48, WeaponStore.Weapon(id, i).KnifeStabTime + WeaponStore.Weapon(id, i).KnifeStabResetTime);
+                Eng.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).KnifeStabTime + WeaponStore.Weapon(id, i).KnifeStabResetTime);
+                WeaponStore.Player(id).PlayerThink = Eng.GameTime + WeaponStore.Weapon(id, i).KnifeStabTime;
             }
         }
         else if (style == 4)
@@ -343,9 +343,9 @@ public static unsafe class Attack
             int result = NativeFunctionRegister.Execute_WpnSecondaryAttackEnd(Eng.IndexOf(entity), id, i);
             if (result == WpnConst.WPN_SUPERCEDE) return;
 
-            float range = Store.Weapon(id, i).KnifeStabRange;
-            float damage = 65.0f * Store.Weapon(id, i).Damage2;
-            float angle = Store.Weapon(id, i).KnifeStabAngle;
+            float range = WeaponStore.Weapon(id, i).KnifeStabRange;
+            float damage = 65.0f * WeaponStore.Weapon(id, i).Damage2;
+            float angle = WeaponStore.Weapon(id, i).KnifeStabAngle;
             Span<float> origin = stackalloc float[3];
             var pPlayer = Eng.EntOfIndex(id)!;
             origin[0] = pPlayer->v.origin.x; origin[1] = pPlayer->v.origin.y; origin[2] = pPlayer->v.origin.z;
@@ -353,31 +353,31 @@ public static unsafe class Attack
             Span<float> param = stackalloc float[6];
             param[0] = range;
             param[1] = angle;
-            param[2] = Store.Weapon(id, i).KnifeStabAngleOffset;
-            param[3] = Store.Weapon(id, i).KnifeStabHeight;
-            param[4] = Store.Weapon(id, i).KnifeStabHeightOffset;
+            param[2] = WeaponStore.Weapon(id, i).KnifeStabAngleOffset;
+            param[3] = WeaponStore.Weapon(id, i).KnifeStabHeight;
+            param[4] = WeaponStore.Weapon(id, i).KnifeStabHeightOffset;
             param[5] = damage;
             int hit = CheckAttack(id, 0, entity, param, origin, angle != 0.0f ? WpnConst.DmgTypeSector : WpnConst.DmgTypeLine, WpnConst.SpdmgNormal);
             if (hit == WpnConst.HitEmpty)
             {
-                Eng.EmitSound(entity, EngineConst.ChanWeapon, Store.Weapon(id, i).Sound3, EngineConst.VolNorm, Store.Weapon(id, i).KnifeSoundVolume[1], 0, EngineConst.PitchNorm);
-                if (Store.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStabBegin] != 0) Core.PlayAnim(id, Store.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStabMiss]);
+                Eng.EmitSound(entity, EngineConst.ChanWeapon, WeaponStore.Weapon(id, i).Sound3, EngineConst.VolNorm, WeaponStore.Weapon(id, i).KnifeSoundVolume[1], 0, EngineConst.PitchNorm);
+                if (WeaponStore.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStabBegin] != 0) PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStabMiss]);
             }
             if (hit == WpnConst.HitPlayer)
             {
-                Eng.EmitSound(entity, EngineConst.ChanWeapon, Store.Weapon(id, i).Sound4, EngineConst.VolNorm, Store.Weapon(id, i).KnifeSoundVolume[2], 0, EngineConst.PitchNorm);
-                if (Store.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStabBegin] != 0) Core.PlayAnim(id, Store.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStab]);
+                Eng.EmitSound(entity, EngineConst.ChanWeapon, WeaponStore.Weapon(id, i).Sound4, EngineConst.VolNorm, WeaponStore.Weapon(id, i).KnifeSoundVolume[2], 0, EngineConst.PitchNorm);
+                if (WeaponStore.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStabBegin] != 0) PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStab]);
             }
             if (hit == WpnConst.HitEntity || hit == WpnConst.HitWall)
             {
-                Eng.EmitSound(entity, EngineConst.ChanWeapon, Store.Weapon(id, i).Sound2, EngineConst.VolNorm, Store.Weapon(id, i).KnifeSoundVolume[0], 0, EngineConst.PitchNorm);
-                if (Store.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStabBegin] != 0) Core.PlayAnim(id, Store.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStab]);
+                Eng.EmitSound(entity, EngineConst.ChanWeapon, WeaponStore.Weapon(id, i).Sound2, EngineConst.VolNorm, WeaponStore.Weapon(id, i).KnifeSoundVolume[0], 0, EngineConst.PitchNorm);
+                if (WeaponStore.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStabBegin] != 0) PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).KnifeAnim[WpnConst.KnifeAnimStab]);
             }
-            Eng.SetPDataFloat(entity, 46, Store.Weapon(id, i).KnifeStabResetTime);
-            Eng.SetPDataFloat(entity, 47, Store.Weapon(id, i).KnifeStabResetTime);
-            Eng.SetPDataFloat(entity, 48, Store.Weapon(id, i).KnifeStabResetTime);
-            Eng.SetPDataFloat(id, 83, Store.Weapon(id, i).KnifeStabResetTime);
-            Store.Player(id).PlayerThink = Eng.GameTime + Store.Weapon(id, i).KnifeStabResetTime;
+            Eng.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).KnifeStabResetTime);
+            Eng.SetPDataFloat(entity, 47, WeaponStore.Weapon(id, i).KnifeStabResetTime);
+            Eng.SetPDataFloat(entity, 48, WeaponStore.Weapon(id, i).KnifeStabResetTime);
+            Eng.SetPDataFloat(id, 83, WeaponStore.Weapon(id, i).KnifeStabResetTime);
+            WeaponStore.Player(id).PlayerThink = Eng.GameTime + WeaponStore.Weapon(id, i).KnifeStabResetTime;
             NativeFunctionRegister.Execute_WpnSecondaryAttackEndPost(Eng.IndexOf(entity), id, i);
         }
     }
@@ -390,12 +390,12 @@ public static unsafe class Attack
         var pPlayer = Eng.GetPDataCbase(entity, 41);
         if (pPlayer == null) return;
         int id = Eng.IndexOf(pPlayer);
-        int i = Store.GetWeaponType(entity);
-        Eng.SetPDataFloat(entity, 46, Store.Weapon(id, i).SightOpenTime);
-        Eng.SetPDataFloat(entity, 47, Store.Weapon(id, i).SightOpenTime);
-        Eng.SetPDataFloat(entity, 48, Store.Weapon(id, i).SightOpenTime);
-        Store.Player(id).SightMode = WpnConst.AtoB;
-        Core.PlayAnim(id, Store.Weapon(id, i).Anim[WpnConst.AnimSightOpen]);
+        int i = WeaponStore.GetWeaponType(entity);
+        Eng.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).SightOpenTime);
+        Eng.SetPDataFloat(entity, 47, WeaponStore.Weapon(id, i).SightOpenTime);
+        Eng.SetPDataFloat(entity, 48, WeaponStore.Weapon(id, i).SightOpenTime);
+        WeaponStore.Player(id).SightMode = WpnConst.AtoB;
+        PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).Anim[WpnConst.AnimSightOpen]);
         Eng.SetPDataInt(pPlayer, 361, Eng.GetPDataInt(pPlayer, 361) | (1 << 6));
     }
 
@@ -405,13 +405,13 @@ public static unsafe class Attack
         var pPlayer = Eng.GetPDataCbase(entity, 41);
         if (pPlayer == null) return;
         int id = Eng.IndexOf(pPlayer);
-        int i = Store.GetWeaponType(entity);
-        Eng.SetPDataFloat(entity, 46, Store.Weapon(id, i).SightCloseTime);
-        Eng.SetPDataFloat(entity, 47, Store.Weapon(id, i).SightCloseTime);
-        Eng.SetPDataFloat(entity, 48, Store.Weapon(id, i).SightCloseTime);
-        Eng.SetViewModel(pPlayer, Store.Weapon(id, i).VModel);
-        Store.Player(id).SightMode = WpnConst.BtoA;
-        Core.PlayAnim(id, Store.Weapon(id, i).Anim[WpnConst.AnimSightClose]);
+        int i = WeaponStore.GetWeaponType(entity);
+        Eng.SetPDataFloat(entity, 46, WeaponStore.Weapon(id, i).SightCloseTime);
+        Eng.SetPDataFloat(entity, 47, WeaponStore.Weapon(id, i).SightCloseTime);
+        Eng.SetPDataFloat(entity, 48, WeaponStore.Weapon(id, i).SightCloseTime);
+        Eng.SetViewModel(pPlayer, WeaponStore.Weapon(id, i).VModel);
+        WeaponStore.Player(id).SightMode = WpnConst.BtoA;
+        PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).Anim[WpnConst.AnimSightClose]);
         Eng.SetPDataInt(pPlayer, 361, Eng.GetPDataInt(pPlayer, 361) & ~(1 << 6));
     }
 
@@ -421,11 +421,11 @@ public static unsafe class Attack
         var pPlayer = Eng.GetPDataCbase(entity, 41);
         if (pPlayer == null) return;
         int id = Eng.IndexOf(pPlayer);
-        int i = Store.GetWeaponType(entity);
-        if (Store.Weapon(id, i).SightDistance != 0.0f) Eng.SetPDataInt(pPlayer, 363, PawnMath.Round(Store.Weapon(id, i).SightDistance));
-        Eng.SetViewModel(pPlayer, Store.Weapon(id, i).SightModel);
-        Store.Player(id).SightMode = WpnConst.Open;
-        Core.PlayAnim(id, Store.Weapon(id, i).Anim[WpnConst.AnimIdle]);
+        int i = WeaponStore.GetWeaponType(entity);
+        if (WeaponStore.Weapon(id, i).SightDistance != 0.0f) Eng.SetPDataInt(pPlayer, 363, PawnMath.Round(WeaponStore.Weapon(id, i).SightDistance));
+        Eng.SetViewModel(pPlayer, WeaponStore.Weapon(id, i).SightModel);
+        WeaponStore.Player(id).SightMode = WpnConst.Open;
+        PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).Anim[WpnConst.AnimIdle]);
     }
 
     // public ClosingEnd(iEntity)
@@ -434,15 +434,15 @@ public static unsafe class Attack
         var pPlayer = Eng.GetPDataCbase(entity, 41);
         if (pPlayer == null) return;
         int id = Eng.IndexOf(pPlayer);
-        int i = Store.GetWeaponType(entity);
+        int i = WeaponStore.GetWeaponType(entity);
         Eng.SetPDataInt(pPlayer, 361, Eng.GetPDataInt(pPlayer, 361) & ~(1 << 6));
         Eng.SetPDataInt(pPlayer, 363, 90);
-        Store.Player(id).SightMode = WpnConst.Closed;
-        Eng.SetViewModel(pPlayer, Store.Weapon(id, i).VModel);
-        Core.PlayAnim(id, Store.Weapon(id, i).Anim[WpnConst.AnimIdle]);
-        if (!Store.Player(id).Reloading) return;
+        WeaponStore.Player(id).SightMode = WpnConst.Closed;
+        Eng.SetViewModel(pPlayer, WeaponStore.Weapon(id, i).VModel);
+        PlayerStocks.PlayAnim(id, WeaponStore.Weapon(id, i).Anim[WpnConst.AnimIdle]);
+        if (!WeaponStore.Player(id).Reloading) return;
 
-        Store.Player(id).Reloading = false;
-        MF.CallNative("ExecuteHamB", EngineConst.HamWeaponReload, Eng.IndexOf(entity));
+        WeaponStore.Player(id).Reloading = false;
+        HamSandwich.ExecuteHamB(EngineConst.HamWeaponReload, Eng.IndexOf(entity));
     }
 }

@@ -8,7 +8,7 @@ namespace Module;
 //   Players     - 按玩家 id 懒创建的运行时数据
 // 原版 g_xxx[MAXPLAYERS+1][MAXWEAPONS] 在加载时复制 32 份;
 // 这里模板只存一份,玩家只有在 WPN_SetParam* 改过某模板时才有自己的副本。
-public static unsafe class Store
+public static unsafe class WeaponStore
 {
     public static readonly WeaponConfig Config = new();
     public static readonly Dictionary<int, PlayerData> Players = new();

@@ -22,17 +22,15 @@ WeaponTemplate.NET/
 └── src/
     ├── WeaponTemplate/          # 核心模块(WeaponTemplate.sma 的移植)
     │   ├── Module.cs            # 入口 partial class(源生成器补全 17 个固定导出)
-    │   ├── Const.cs             # wpn_const.inc + CSW/TE/Ham/按钮等引擎常量
-    │   ├── Native.cs            # fakemeta(pev/engfunc/get_pdata)的 HLSDK 直接访问封装
-    │   ├── WeaponStore.cs       # 原版静态表 + 33×MAXWEAPON 模板数据 + 每地图重置
-    │   ├── ConfigLoad.cs        # plugin_precache + LoadWeapon/LoadKnife/LoadGrenade(中文 INI)
-    │   ├── Forwards.cs          # WPN_* 事件([AmxxForward],WPN_LoadFiles 因 precache 时序手动注册)
-    │   ├── Natives.cs           # WPN_* natives([AmxxNative])
-    │   ├── Hooks.cs             # FM_* forward → [AmxxHook] metamod 函数表 hook
-    │   ├── Core.cs              # GiveWeapon/换弹补给/WeaponList/金钱备弹/烟雾/血 等业务
-    │   ├── Attack.cs            # CheckAttack/ExecuteAttack/KnifeAttack/机瞄开合
-    │   ├── Buy.cs               # BOT 购买模拟
-    │   ├── HamCallbacks.cs      # hamsandwich/消息/事件回调 + plugin_init 全量注册
+    │   ├── Lifecycle/           # 插件生命周期:PluginLifecycle.cs(precache/init/PluginsLoaded + 全量注册)
+    │   ├── Consts/              # WpnConst(wpn_const.inc) + EngineConst(CSW/TE/Ham/按钮等)
+    │   ├── Data/                # WeaponData/WeaponConfig(模板) + PlayerData + WeaponStore(状态枢纽) + GameTables(静态表)
+    │   ├── Engine/              # Eng.cs:fakemeta(pev/engfunc/get_pdata)的 HLSDK 直接访问封装
+    │   ├── Api/                 # 对 Pawn 的接口:Natives(注册/发放/参数) + Forwards(WPN_* 事件)
+    │   ├── Interop/             # 生态 native 声明式导入([AmxxImportNative],按来源模块分文件:HamSandwich/AmxModX/FakeMeta)
+    │   ├── Hooks/               # [AmxxHook] metamod 函数表 hook(按 ClientCommand/SetModel/Trace/PlayerThink 等分文件)
+    │   ├── Callbacks/           # [AmxxCallback] Ham/消息/事件回调(按 Events/Messages/Ham 分文件)
+    │   ├── Features/            # 业务逻辑:ConfigLoad(INI)/WeaponGive(发放)/WeaponAmmo(弹药)/PlayerStocks(金钱备弹焦距)/VectorMath(向量)/Effects(血烟雾)/Attack/Buy
     │   └── include/             # Pawn 侧 include(与原版逐字节一致)
     ├── WeaponExtend/            # WeaponExtend.sma(抛射物/范围攻击扩展)的移植
     └── ZpNewWeapon/             # zp_newweapon.sma(ZP4.3 兼容胶水)的移植
@@ -43,8 +41,8 @@ WeaponTemplate.NET/
 | 原版 AMXX 机制 | 移植版实现 |
 |---|---|
 | `register_forward(FM_*)` fakemeta forward | `[AmxxHook]` metamod 函数表 hook（ClientCommand/UpdateClientData 为 GameDll 表，SetModel/PlaybackEvent/EmitSound/TraceLine/TraceHull 为 Engine 表，Think/PlayerPostThink 为 Post hook）；`FMRES_SUPERCEDE` 通过设置 `gpMetaGlobals->mres` 表达；未处理时由宿主调用原版 |
-| `RegisterHam`(hamsandwich) | `plugin_init` 中经 `MF.CallNative("RegisterHam", ...)` 注册，回调经 bridge public（`[AmxxCallback]`）进入 C#；返回 `HAM_IGNORED(1)/HAM_SUPERCEDE(4)` |
-| `register_message` / `register_event` / `register_logevent` | AMXX 核心 native（`MF.CallNative` / `MF.RegisterEvent` / `MF.RegisterLogEvent`），回调同为 bridge public |
+| `RegisterHam`(hamsandwich) | `[AmxxImportNative("RegisterHam")]` 声明式导入（`Interop/HamSandwich.cs`，`RegisterHamFromEntity`/`ExecuteHam(B)`/`SetHamParamFloat` 同类），回调经 bridge public（`[AmxxCallback]`）进入 C#；返回 `HAM_IGNORED(1)/HAM_SUPERCEDE(4)` |
+| `register_message` / `register_event` / `register_logevent` | `register_message` 及 `get/set_msg_arg_*` 经 `[AmxxImportNative]` 导入（`Interop/AmxModX.cs`）；`register_event` / `register_logevent` 经 `MF.RegisterEvent` / `MF.RegisterLogEvent`，回调同为 bridge public |
 | fakemeta `pev/set_pev/engfunc/dllfunc` | HLSDK 结构体直接访问（`edict_t->v`、`ModuleRuntime.g_engfuncs`、`gpGamedllFuncs->dllapi_table`） |
 | `get_pdata_*` / `get_pdata_cbase` | `pvPrivateData` 单元读写（Windows 偏移，linuxdiff 仅 Linux 生效故原样使用）；cbase 转换 = `[vtable][pev*]` 布局 → `pev->pContainingEntity` |
 | `CreateMultiForward` 的 WPN_* 事件 | `[AmxxForward]` + `ET_CONTINUE`（SDK 在插件加载后自动注册，保留插件返回值）+ 生成的 `Execute_WpnXxx`；**例外**：`WPN_LoadFiles` 需在 precache 阶段触发，于 `plugin_precache` 中手动 `MF.RegisterForward`/`MF.ExecuteForward` |

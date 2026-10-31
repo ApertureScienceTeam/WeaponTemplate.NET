@@ -14,19 +14,18 @@ public static unsafe partial class ZpNewWeapon
     private const int AmmoCost1 = 100;
     private const int AmmoCost2 = 100;
     private const int MaxPlayers = 33;
-    // 容量以核心模块为准:模板序号 1..MaxTemplateCount(512),下标 0 占位(同 WeaponExtend 的对齐决策)。
-    private const int MaxWeapon = WpnConst.MaxTemplateCount + 1;
 
     // 购买子弹的道具id / 购买武器的道具id
     private static readonly int[] AmmoItemId = new int[2];
-    private static readonly int[] ItemId = new int[MaxWeapon];
+    // 模板序号 -> ZP 道具id;购买命令为 empty 等未注册为 ZP 道具的模板没有条目
+    private static readonly Dictionary<int, int> ItemId = new();
 
     static ZpNewWeapon() => ResetAll();
 
     public static void ResetAll()
     {
         Array.Fill(AmmoItemId, -1);
-        Array.Fill(ItemId, -1);
+        ItemId.Clear();
     }
 
     // ---- 生命周期 ----
@@ -45,7 +44,7 @@ public static unsafe partial class ZpNewWeapon
 
         // 将每把武器都注册为ZP道具，购买命令为empty的除外
         int amount = Wpn.GetParamInt(0, 0, WpnConst.WpnIAmount);
-        for (int i = 1; i <= Math.Min(amount, MaxWeapon - 1); i++)
+        for (int i = 1; i <= amount; i++)
         {
             Wpn.GetParamString(i, 1, WpnConst.WpnSzCommand, out var weaponCmd, 63);
             if (weaponCmd == "empty" || weaponCmd.Length == 0)
@@ -114,9 +113,9 @@ public static unsafe partial class ZpNewWeapon
         else
         {
             int amount = Wpn.GetParamInt(0, 0, WpnConst.WpnIAmount);
-            for (int i = 1; i <= Math.Min(amount, MaxWeapon - 1); i++)
+            for (int i = 1; i <= amount; i++)
             {
-                if (ItemId[i] != itemId) continue;
+                if (ItemId.GetValueOrDefault(i, -1) != itemId) continue;
 
                 int entityIndex = Wpn.GiveWeapon(id, i);
                 if (entityIndex <= 0) return Zp.PluginHandled;
@@ -133,6 +132,6 @@ public static unsafe partial class ZpNewWeapon
         var entity = Engine.EntOfIndex(index);
         if (!Engine.IsValid(entity)) return 0;
         int serial = Engine.GetPDataInt(entity, CsOffsets.ItemTemplateSerial);
-        return serial >= 1 && serial < MaxWeapon ? serial : 0;
+        return serial >= 1 && serial <= Wpn.GetParamInt(0, 0, WpnConst.WpnIAmount) ? serial : 0;
     }
 }

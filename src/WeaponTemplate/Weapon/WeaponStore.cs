@@ -14,7 +14,6 @@ public static unsafe class WeaponStore
     public static readonly Dictionary<int, PlayerData> Players = new();
 
     public static int WeaponAmount => Config.WeaponAmount;
-    public static bool CanRegister => Config.CanRegister;
     public static bool IsPlayerIndex(int id) => id >= 1 && id <= 32;
     public static bool IsTemplate(int index) => Config.IsTemplate(index);
 
@@ -31,12 +30,12 @@ public static unsafe class WeaponStore
     public static WeaponData Weapon(int id, int index) => Player(id).Weapon(index);
     public static WeaponData WriteWeapon(int id, int index) => Player(id).WeaponForWrite(index);
 
-    public static bool TryCreateTemplate(out int index)
+    public static int CreateTemplate()
     {
-        if (!Config.TryCreate(out index)) return false;
+        int index = Config.Create();
         // 运行时注册模板也要让已有玩家跟上新序号
         foreach (var player in Players.Values) player.EnsureTemplateCapacity(index);
-        return true;
+        return index;
     }
 
     // ---- 全局状态(不属于任何玩家) ----

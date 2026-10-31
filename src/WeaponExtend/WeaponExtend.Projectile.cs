@@ -43,10 +43,10 @@ public static unsafe partial class WeaponExtend
 
         // 延迟时间
         float dmgTime = pev->dmgtime;
-        if (WeaponDamageType[owner, i] == DamageTypeDelayExp && Engine.GameTime > dmgTime)
+        if (WeaponDamageType[i] == DamageTypeDelayExp && Engine.GameTime > dmgTime)
         {
             int explodeFlag = 0;
-            if (ProjectileExplodeEffect[owner, i] == 0)
+            if (ProjectileExplodeEffect[i] == 0)
                 explodeFlag = EngineConst.TeExplFlagNoDlights | EngineConst.TeExplFlagNoParticles;
             else
             {
@@ -58,26 +58,26 @@ public static unsafe partial class WeaponExtend
                 Engine.WriteByte(Engine.RandomNum(46, 48));
                 Engine.MessageEnd();
             }
-            if (ProjectileExplodeSound[owner, i] != DmgSoundDefault)
+            if (ProjectileExplodeSound[i] != DmgSoundDefault)
             {
                 explodeFlag |= EngineConst.TeExplFlagNoSound;
-                if (ProjectileExplodeSound[owner, i] == DmgSoundCustom)
-                    Engine.EmitSound(entity, 1, ProjectileExplodeSoundPath[owner, i], 1.0f, 0.8f, 0, 100);
+                if (ProjectileExplodeSound[i] == DmgSoundCustom)
+                    Engine.EmitSound(entity, 1, ProjectileExplodeSoundPath[i], 1.0f, 0.8f, 0, 100);
             }
             Engine.MessageBegin(0, 23, null, null);
             Engine.WriteByte(EngineConst.TeExplosion);
             Engine.WriteCoord(origin[0]);
             Engine.WriteCoord(origin[1]);
-            Engine.WriteCoord(origin[2] + ProjectileExpHeightOfs[owner, i]);
-            Engine.WriteShort(ProjectileExplodeSprite[owner, i]);
-            Engine.WriteByte(FloatMath.Round(ProjectileExpScale[owner, i] * 10.0f));
-            Engine.WriteByte(FloatMath.Round(ProjectileExpFramerate[owner, i] * 10.0f));
+            Engine.WriteCoord(origin[2] + ProjectileExpHeightOfs[i]);
+            Engine.WriteShort(ProjectileExplodeSprite[i]);
+            Engine.WriteByte(FloatMath.Round(ProjectileExpScale[i] * 10.0f));
+            Engine.WriteByte(FloatMath.Round(ProjectileExpFramerate[i] * 10.0f));
             Engine.WriteByte(explodeFlag);
             Engine.MessageEnd();
 
             Span<float> param = stackalloc float[6];
-            param[0] = ProjectileDamageRadius[owner, i];
-            param[5] = WeaponDamage[owner, i];
+            param[0] = ProjectileDamageRadius[i];
+            param[5] = WeaponDamage[i];
             Wpn.ExecuteAttack(owner, 0, Engine.IndexOf(entity), param.ToArray(), origin.ToArray(), WpnConst.DmgTypeExplosion, WpnConst.SpdmgCantHeadshot);
             if (Engine.IsValid(Engine.EntOfIndex(sprEnt))) Engine.RemoveEntity(Engine.EntOfIndex(sprEnt));
             Engine.RemoveEntity(entity);
@@ -85,7 +85,7 @@ public static unsafe partial class WeaponExtend
         }
 
         // 范围碰撞伤害
-        if (WeaponDamageType[owner, i] == DamageTypeAoeTouch)
+        if (WeaponDamageType[i] == DamageTypeAoeTouch)
         {
             Span<float> param = stackalloc float[6];
             for (int id = 1; id < MaxPlayers; id++)
@@ -96,7 +96,7 @@ public static unsafe partial class WeaponExtend
                 targetOrigin[0] = pTarget->v.origin.x;
                 targetOrigin[1] = pTarget->v.origin.y;
                 targetOrigin[2] = pTarget->v.origin.z;
-                if (VectorMath.Distance(origin, targetOrigin) > ProjectileDamageRadius[owner, i]) continue;
+                if (VectorMath.Distance(origin, targetOrigin) > ProjectileDamageRadius[i]) continue;
 
                 if ((pev->iuser1 & (1 << id)) != 0) continue;
 
@@ -104,7 +104,7 @@ public static unsafe partial class WeaponExtend
 
                 pev->iuser1 |= 1 << id;
                 param.Clear();
-                param[5] = WeaponDamage[owner, i];
+                param[5] = WeaponDamage[i];
                 Wpn.ExecuteAttack(owner, id, Engine.IndexOf(entity), param.ToArray(), origin.ToArray(), WpnConst.DmgTypeTouch, WpnConst.SpdmgCantHeadshot);
             }
         }
@@ -126,13 +126,13 @@ public static unsafe partial class WeaponExtend
             Engine.WriteByte(EngineConst.TeExplosion);
             Engine.WriteCoord(origin[0]);
             Engine.WriteCoord(origin[1]);
-            Engine.WriteCoord(origin[2] + ProjectileTailHeightOfs[owner, i]);
-            Engine.WriteShort(ProjectileTailSprite[owner, i]);
-            Engine.WriteByte(FloatMath.Round(ProjectileTailScale[owner, i] * 10.0f));
-            Engine.WriteByte(FloatMath.Round(ProjectileTailFramerate[owner, i] * 10.0f));
+            Engine.WriteCoord(origin[2] + ProjectileTailHeightOfs[i]);
+            Engine.WriteShort(ProjectileTailSprite[i]);
+            Engine.WriteByte(FloatMath.Round(ProjectileTailScale[i] * 10.0f));
+            Engine.WriteByte(FloatMath.Round(ProjectileTailFramerate[i] * 10.0f));
             Engine.WriteByte(EngineConst.TeExplFlagNoDlights | EngineConst.TeExplFlagNoSound | EngineConst.TeExplFlagNoParticles);
             Engine.MessageEnd();
-            pev->fuser1 = Engine.GameTime + ProjectileTailTime[owner, i];
+            pev->fuser1 = Engine.GameTime + ProjectileTailTime[i];
         }
 
         // 抛射物发光
@@ -144,10 +144,10 @@ public static unsafe partial class WeaponExtend
             Engine.WriteCoord(origin[0]);
             Engine.WriteCoord(origin[1]);
             Engine.WriteCoord(origin[2]);
-            Engine.WriteByte(ProjectileGlowRadius[owner, i] / 10);
-            Engine.WriteByte(ProjectileGlowColor[owner, i, 0]);
-            Engine.WriteByte(ProjectileGlowColor[owner, i, 1]);
-            Engine.WriteByte(ProjectileGlowColor[owner, i, 2]);
+            Engine.WriteByte(ProjectileGlowRadius[i] / 10);
+            Engine.WriteByte(GlowColorR[i]);
+            Engine.WriteByte(GlowColorG[i]);
+            Engine.WriteByte(GlowColorB[i]);
             Engine.WriteByte(1);
             Engine.WriteByte(0);
             Engine.MessageEnd();
@@ -159,9 +159,9 @@ public static unsafe partial class WeaponExtend
             Engine.WriteCoord(origin[1]);
             Engine.WriteCoord(origin[2]);
             Engine.WriteCoord(10.0f);
-            Engine.WriteByte(ProjectileGlowColor[owner, i, 0]);
-            Engine.WriteByte(ProjectileGlowColor[owner, i, 1]);
-            Engine.WriteByte(ProjectileGlowColor[owner, i, 2]);
+            Engine.WriteByte(GlowColorR[i]);
+            Engine.WriteByte(GlowColorG[i]);
+            Engine.WriteByte(GlowColorB[i]);
             Engine.WriteByte(2);
             Engine.WriteCoord(0.0f);
             Engine.MessageEnd();
@@ -170,7 +170,7 @@ public static unsafe partial class WeaponExtend
         }
 
         int target = pev->euser1 != null ? Engine.IndexOf(pev->euser1) : 0;
-        if (ProjectileTraceMode[owner, i] == TraceModeAuto)
+        if (ProjectileTraceMode[i] == TraceModeAuto)
         {
             float maxDis = 99999.0f;
             int tempTarget = 0;
@@ -195,7 +195,7 @@ public static unsafe partial class WeaponExtend
                         tempTarget = player;
                     }
                 }
-                if (maxDis <= ProjectileTraceRadius[owner, i])
+                if (maxDis <= ProjectileTraceRadius[i])
                 {
                     var pTemp = Engine.EntOfIndex(tempTarget);
                     pev->euser1 = pTemp;
@@ -207,17 +207,17 @@ public static unsafe partial class WeaponExtend
                 targetOrigin[0] = pTarget->v.origin.x;
                 targetOrigin[1] = pTarget->v.origin.y;
                 targetOrigin[2] = pTarget->v.origin.z;
-                VectorMath.GetSpeedVector(origin, targetOrigin, ProjectileFlySpeed[owner, i], velocity);
+                VectorMath.GetSpeedVector(origin, targetOrigin, ProjectileFlySpeed[i], velocity);
                 EntityTurn(entity, targetOrigin);
                 pev->velocity.x = velocity[0];
                 pev->velocity.y = velocity[1];
                 pev->velocity.z = velocity[2];
             }
         }
-        else if (ProjectileTraceMode[owner, i] == TraceModeAim)
+        else if (ProjectileTraceMode[i] == TraceModeAim)
         {
             VectorMath.GetAimOrigin(owner, targetOrigin);
-            VectorMath.GetSpeedVector(origin, targetOrigin, ProjectileFlySpeed[owner, i], velocity);
+            VectorMath.GetSpeedVector(origin, targetOrigin, ProjectileFlySpeed[i], velocity);
             EntityTurn(entity, targetOrigin);
             pev->velocity.x = velocity[0];
             pev->velocity.y = velocity[1];
@@ -247,10 +247,10 @@ public static unsafe partial class WeaponExtend
         int sprEnt = pev->iuser4;
 
         // 碰撞爆炸
-        if (WeaponDamageType[owner, i] == DamageTypeTouchExp)
+        if (WeaponDamageType[i] == DamageTypeTouchExp)
         {
             int explodeFlag = 0;
-            if (ProjectileExplodeEffect[owner, i] == 0)
+            if (ProjectileExplodeEffect[i] == 0)
                 explodeFlag = EngineConst.TeExplFlagNoDlights | EngineConst.TeExplFlagNoParticles;
             else
             {
@@ -262,33 +262,33 @@ public static unsafe partial class WeaponExtend
                 Engine.WriteByte(Engine.RandomNum(46, 48));
                 Engine.MessageEnd();
             }
-            if (ProjectileExplodeSound[owner, i] != DmgSoundDefault)
+            if (ProjectileExplodeSound[i] != DmgSoundDefault)
             {
                 explodeFlag |= EngineConst.TeExplFlagNoSound;
-                if (ProjectileExplodeSound[owner, i] == DmgSoundCustom)
-                    Engine.EmitSound(entity, 1, ProjectileExplodeSoundPath[owner, i], 1.0f, 0.8f, 0, 100);
+                if (ProjectileExplodeSound[i] == DmgSoundCustom)
+                    Engine.EmitSound(entity, 1, ProjectileExplodeSoundPath[i], 1.0f, 0.8f, 0, 100);
             }
             Engine.MessageBegin(0, 23, null, null);
             Engine.WriteByte(EngineConst.TeExplosion);
             Engine.WriteCoord(origin[0]);
             Engine.WriteCoord(origin[1]);
-            Engine.WriteCoord(origin[2] + ProjectileExpHeightOfs[owner, i]);
-            Engine.WriteShort(ProjectileExplodeSprite[owner, i]);
-            Engine.WriteByte(FloatMath.Round(ProjectileExpScale[owner, i] * 10.0f));
-            Engine.WriteByte(FloatMath.Round(ProjectileExpFramerate[owner, i] * 10.0f));
+            Engine.WriteCoord(origin[2] + ProjectileExpHeightOfs[i]);
+            Engine.WriteShort(ProjectileExplodeSprite[i]);
+            Engine.WriteByte(FloatMath.Round(ProjectileExpScale[i] * 10.0f));
+            Engine.WriteByte(FloatMath.Round(ProjectileExpFramerate[i] * 10.0f));
             Engine.WriteByte(explodeFlag);
             Engine.MessageEnd();
 
             Span<float> param = stackalloc float[6];
-            param[0] = ProjectileDamageRadius[owner, i];
-            param[5] = WeaponDamage[owner, i];
+            param[0] = ProjectileDamageRadius[i];
+            param[5] = WeaponDamage[i];
             Wpn.ExecuteAttack(owner, 0, Engine.IndexOf(entity), param.ToArray(), origin.ToArray(), WpnConst.DmgTypeExplosion, WpnConst.SpdmgCantHeadshot);
             if (Engine.IsValid(Engine.EntOfIndex(sprEnt))) Engine.RemoveEntity(Engine.EntOfIndex(sprEnt));
         }
-        else if (WeaponDamageType[owner, i] == DamageTypeTouch)
+        else if (WeaponDamageType[i] == DamageTypeTouch)
         {
             Span<float> param = stackalloc float[6];
-            param[5] = WeaponDamage[owner, i];
+            param[5] = WeaponDamage[i];
             Wpn.ExecuteAttack(owner, Engine.IndexOf(other), Engine.IndexOf(entity), param.ToArray(), origin.ToArray(), WpnConst.DmgTypeTouch, WpnConst.SpdmgCantHeadshot);
         }
         if (Engine.IsValid(Engine.EntOfIndex(sprEnt))) Engine.RemoveEntity(Engine.EntOfIndex(sprEnt));
@@ -303,12 +303,12 @@ public static unsafe partial class WeaponExtend
         edict_t* entity;
 
         // 抛射物模型
-        if (CheckSuffix(ProjectileModelPath[id, i], "mdl") || CheckSuffix(ProjectileModelPath[id, i], "MDL"))
+        if (CheckSuffix(ProjectileModelPath[i], "mdl") || CheckSuffix(ProjectileModelPath[i], "MDL"))
         {
             entityType = ProjectileModel;
             entity = CreateNamedEntityByIndex(InfoTarget);
         }
-        else if (CheckSuffix(ProjectileModelPath[id, i], "spr") || CheckSuffix(ProjectileModelPath[id, i], "SPR"))
+        else if (CheckSuffix(ProjectileModelPath[i], "spr") || CheckSuffix(ProjectileModelPath[i], "SPR"))
         {
             entityType = ProjectileSprite;
             entity = CreateNamedEntityByIndex(EnvSprite);
@@ -317,29 +317,29 @@ public static unsafe partial class WeaponExtend
 
         if (!Engine.IsValid(entity)) return null;
 
-        Engine.SetModel(entity, ProjectileModelPath[id, i]);
+        Engine.SetModel(entity, ProjectileModelPath[i]);
         var pev = &entity->v;
 
         // 抛射物重力
-        if (ProjectileGravity[id, i] == 0.0f) pev->movetype = 5;  // MOVETYPE_FLY
+        if (ProjectileGravity[i] == 0.0f) pev->movetype = 5;  // MOVETYPE_FLY
         else pev->movetype = 6;                                    // MOVETYPE_TOSS
-        pev->gravity = ProjectileGravity[id, i];
+        pev->gravity = ProjectileGravity[i];
 
         // 飞行速度 & 飞行高度修正
         Span<float> velocity = stackalloc float[3];
-        VectorMath.GetSpeedVector(origin, targetOrigin, ProjectileFlySpeed[id, i], velocity);
-        if (ProjectileGravity[id, i] > 0.0f) velocity[2] += ProjectileHeightOfs[id, i];
+        VectorMath.GetSpeedVector(origin, targetOrigin, ProjectileFlySpeed[i], velocity);
+        if (ProjectileGravity[i] > 0.0f) velocity[2] += ProjectileHeightOfs[i];
         pev->velocity.x = velocity[0];
         pev->velocity.y = velocity[1];
         pev->velocity.z = velocity[2];
 
         // 延迟时间
-        if (WeaponDamageType[id, i] == DamageTypeDelayExp)
-            pev->dmgtime = Engine.GameTime + ProjectileDelay[id, i];
+        if (WeaponDamageType[i] == DamageTypeDelayExp)
+            pev->dmgtime = Engine.GameTime + ProjectileDelay[i];
 
         // 存在时间
-        if (ProjectileDuration[id, i] > 0.0f)
-            pev->fuser4 = Engine.GameTime + ProjectileDuration[id, i];
+        if (ProjectileDuration[i] > 0.0f)
+            pev->fuser4 = Engine.GameTime + ProjectileDuration[i];
 
         // 其他设置
         var pPlayer = Engine.EntOfIndex(id);
@@ -361,21 +361,21 @@ public static unsafe partial class WeaponExtend
         pev->maxs = new vec3_t { x = 1, y = 1, z = 1 };
         pev->nextthink = Engine.GameTime + 0.01f;
         pev->iuser2 = entityType;
-        pev->framerate = ProjectileFramerate[id, i];
+        pev->framerate = ProjectileFramerate[i];
         if (entityType == ProjectileSprite)
         {
             pev->rendermode = 5; // kRenderTransAdd
-            pev->renderamt = ProjectileBrightness[id, i];
+            pev->renderamt = ProjectileBrightness[i];
             pev->rendercolor = new vec3_t { x = 255, y = 255, z = 255 };
-            pev->scale = ProjectileScale[id, i];
-            int modelIndex = Engine.ModelIndex(ProjectileModelPath[id, i]);
+            pev->scale = ProjectileScale[i];
+            int modelIndex = Engine.ModelIndex(ProjectileModelPath[i]);
             int frames = Engine.ModelFrames(modelIndex);
             pev->iuser3 = frames;
         }
         else pev->animtime = Engine.GameTime;
 
         // 抛射物拖尾
-        if (ProjectileHasTail[id, i] != 0)
+        if (ProjectileHasTail[i] != 0)
         {
             Engine.MessageBegin(0, 23, null, null);
             Engine.WriteByte(EngineConst.TeBeamFollow);
@@ -383,19 +383,19 @@ public static unsafe partial class WeaponExtend
             Engine.WriteShort(SprBeamFollow);
             Engine.WriteByte(10);
             Engine.WriteByte(3);
-            Engine.WriteByte(ProjectileTailColor[id, i, 0]);
-            Engine.WriteByte(ProjectileTailColor[id, i, 1]);
-            Engine.WriteByte(ProjectileTailColor[id, i, 2]);
-            Engine.WriteByte(ProjectileTailColor[id, i, 3]);
+            Engine.WriteByte(TailColorR[i]);
+            Engine.WriteByte(TailColorG[i]);
+            Engine.WriteByte(TailColorB[i]);
+            Engine.WriteByte(TailColorAlpha[i]);
             Engine.MessageEnd();
         }
 
         // 拖尾间隔SPR
-        if (ProjectileTailSprite[id, i] > 0)
-            pev->fuser1 = Engine.GameTime + ProjectileTailTime[id, i];
+        if (ProjectileTailSprite[i] > 0)
+            pev->fuser1 = Engine.GameTime + ProjectileTailTime[i];
 
         // 抛射物附带SPR
-        if (ProjectileExtraSprite[id, i] is { Length: > 0 })
+        if (ProjectileExtraSprite[i] is { Length: > 0 })
         {
             var sprEnt = CreateNamedEntityByIndex(EnvSprite);
             if (Engine.IsValid(sprEnt))
@@ -407,10 +407,10 @@ public static unsafe partial class WeaponExtend
                 sprPev->renderamt = 255.0f;
                 sprPev->rendercolor = new vec3_t { x = 255, y = 255, z = 255 };
                 sprPev->aiment = entity;
-                sprPev->framerate = ExtraSpriteFramerate[id, i];
-                sprPev->scale = ExtraSpriteScale[id, i];
-                Engine.SetModel(sprEnt, ProjectileExtraSprite[id, i]);
-                int modelIndex = Engine.ModelIndex(ProjectileExtraSprite[id, i]);
+                sprPev->framerate = ExtraSpriteFramerate[i];
+                sprPev->scale = ExtraSpriteScale[i];
+                Engine.SetModel(sprEnt, ProjectileExtraSprite[i]);
+                int modelIndex = Engine.ModelIndex(ProjectileExtraSprite[i]);
                 int frames = Engine.ModelFrames(modelIndex);
                 sprPev->iuser1 = frames;
                 pev->iuser4 = Engine.IndexOf(sprEnt);
@@ -418,17 +418,17 @@ public static unsafe partial class WeaponExtend
         }
 
         // 抛射物发光
-        if (ProjectileGlow[id, i] != 0)
+        if (ProjectileGlow[i] != 0)
         {
             Engine.MessageBegin(3, 23, origin, null);
             Engine.WriteByte(EngineConst.TeDlight);
             Engine.WriteCoord(origin[0]);
             Engine.WriteCoord(origin[1]);
             Engine.WriteCoord(origin[2]);
-            Engine.WriteByte(ProjectileGlowRadius[id, i] / 10);
-            Engine.WriteByte(ProjectileGlowColor[id, i, 0]);
-            Engine.WriteByte(ProjectileGlowColor[id, i, 1]);
-            Engine.WriteByte(ProjectileGlowColor[id, i, 2]);
+            Engine.WriteByte(ProjectileGlowRadius[i] / 10);
+            Engine.WriteByte(GlowColorR[i]);
+            Engine.WriteByte(GlowColorG[i]);
+            Engine.WriteByte(GlowColorB[i]);
             Engine.WriteByte(1);
             Engine.WriteByte(0);
             Engine.MessageEnd();
@@ -440,9 +440,9 @@ public static unsafe partial class WeaponExtend
             Engine.WriteCoord(origin[1]);
             Engine.WriteCoord(origin[2]);
             Engine.WriteCoord(10.0f);
-            Engine.WriteByte(ProjectileGlowColor[id, i, 0]);
-            Engine.WriteByte(ProjectileGlowColor[id, i, 1]);
-            Engine.WriteByte(ProjectileGlowColor[id, i, 2]);
+            Engine.WriteByte(GlowColorR[i]);
+            Engine.WriteByte(GlowColorG[i]);
+            Engine.WriteByte(GlowColorB[i]);
             Engine.WriteByte(2);
             Engine.WriteCoord(0.0f);
             Engine.MessageEnd();

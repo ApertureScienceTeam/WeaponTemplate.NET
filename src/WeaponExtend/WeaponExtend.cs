@@ -48,9 +48,6 @@ public static unsafe partial class WeaponExtend
     private const string WpnProjectileExtra = "wpn_projectile_extra";
 
     private const int MaxPlayers = 33;
-    // 容量以核心模块为准(2026-10 决策):模板序号 1..MaxTemplateCount(512),下标 0 占位。
-    // 原版 MAXWEAPON=128 与核心上限一致;核心放宽到 512 后这里必须跟上,否则第 129 个模板会让 OnLoadFiles 越界。
-    private const int MaxWeapon = WpnConst.MaxTemplateCount + 1;
 
     // ---- 生命周期 ----
 
@@ -92,72 +89,72 @@ public static unsafe partial class WeaponExtend
     private static void ApplyLoadFilesValue(int weaponIndex, string key, string value)
     {
         int i = weaponIndex;
-        if (key == "攻击方式") for (int id = 1; id < MaxPlayers; id++) WeaponAttackMode[id, i] = int.Parse(value, CultureInfo.InvariantCulture);
-        else if (key == "武器伤害值") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) WeaponDamage[id, i] = v; }
+        if (key == "攻击方式") WeaponAttackMode.Set(i, int.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "武器伤害值") WeaponDamage.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
         else if (key == "抛射物模型")
         {
-            for (int id = 1; id < MaxPlayers; id++) ProjectileModelPath[id, i] = value;
+            ProjectileModelPath.Set(i, value);
             Engine.PrecacheModel(value);
         }
-        else if (key == "抛射物播放速率") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileFramerate[id, i] = v; }
-        else if (key == "抛射物缩放") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileScale[id, i] = v; }
-        else if (key == "抛射物亮度") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileBrightness[id, i] = v; }
-        else if (key == "抛射物重力") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileGravity[id, i] = v; }
-        else if (key == "飞行速度") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileFlySpeed[id, i] = v; }
-        else if (key == "飞行高度修正") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileHeightOfs[id, i] = v; }
-        else if (key == "伤害类型") for (int id = 1; id < MaxPlayers; id++) WeaponDamageType[id, i] = int.Parse(value, CultureInfo.InvariantCulture);
+        else if (key == "抛射物播放速率") ProjectileFramerate.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "抛射物缩放") ProjectileScale.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "抛射物亮度") ProjectileBrightness.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "抛射物重力") ProjectileGravity.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "飞行速度") ProjectileFlySpeed.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "飞行高度修正") ProjectileHeightOfs.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "伤害类型") WeaponDamageType.Set(i, int.Parse(value, CultureInfo.InvariantCulture));
         else if (key == "爆炸SPR")
         {
             int sprite = Engine.PrecacheModel(value);
-            for (int id = 1; id < MaxPlayers; id++) ProjectileExplodeSprite[id, i] = sprite;
+            ProjectileExplodeSprite.Set(i, sprite);
         }
-        else if (key == "爆炸SPR播放速率") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileExpFramerate[id, i] = v; }
-        else if (key == "爆炸SPR缩放") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileExpScale[id, i] = v; }
-        else if (key == "爆炸SPR高度修正") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileExpHeightOfs[id, i] = v; }
-        else if (key == "爆炸声音") for (int id = 1; id < MaxPlayers; id++) ProjectileExplodeSound[id, i] = int.Parse(value, CultureInfo.InvariantCulture);
+        else if (key == "爆炸SPR播放速率") ProjectileExpFramerate.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "爆炸SPR缩放") ProjectileExpScale.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "爆炸SPR高度修正") ProjectileExpHeightOfs.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "爆炸声音") ProjectileExplodeSound.Set(i, int.Parse(value, CultureInfo.InvariantCulture));
         else if (key == "爆炸声音路径")
         {
-            for (int id = 1; id < MaxPlayers; id++) ProjectileExplodeSoundPath[id, i] = value;
+            ProjectileExplodeSoundPath.Set(i, value);
             Engine.PrecacheSound(value);
         }
-        else if (key == "爆炸特效") for (int id = 1; id < MaxPlayers; id++) ProjectileExplodeEffect[id, i] = int.Parse(value, CultureInfo.InvariantCulture);
-        else if (key == "伤害半径") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileDamageRadius[id, i] = v; }
-        else if (key == "存在时间") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileDuration[id, i] = v; }
-        else if (key == "延迟时间") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileDelay[id, i] = v; }
-        else if (key == "抛射物拖尾") for (int id = 1; id < MaxPlayers; id++) ProjectileHasTail[id, i] = int.Parse(value, CultureInfo.InvariantCulture);
-        else if (key == "抛射物拖尾颜色R") { int v = int.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileTailColor[id, i, 0] = v; }
-        else if (key == "抛射物拖尾颜色G") { int v = int.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileTailColor[id, i, 1] = v; }
-        else if (key == "抛射物拖尾颜色B") { int v = int.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileTailColor[id, i, 2] = v; }
-        else if (key == "抛射物拖尾透明度") { int v = int.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileTailColor[id, i, 3] = v; }
+        else if (key == "爆炸特效") ProjectileExplodeEffect.Set(i, int.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "伤害半径") ProjectileDamageRadius.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "存在时间") ProjectileDuration.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "延迟时间") ProjectileDelay.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "抛射物拖尾") ProjectileHasTail.Set(i, int.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "抛射物拖尾颜色R") TailColorR.Set(i, int.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "抛射物拖尾颜色G") TailColorG.Set(i, int.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "抛射物拖尾颜色B") TailColorB.Set(i, int.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "抛射物拖尾透明度") TailColorAlpha.Set(i, int.Parse(value, CultureInfo.InvariantCulture));
         else if (key == "拖尾间隔SPR")
         {
             int sprite = Engine.PrecacheModel(value);
-            for (int id = 1; id < MaxPlayers; id++) ProjectileTailSprite[id, i] = sprite;
+            ProjectileTailSprite.Set(i, sprite);
         }
-        else if (key == "拖尾间隔时间") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileTailTime[id, i] = v; }
-        else if (key == "拖尾间隔SPR播放速率") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileTailFramerate[id, i] = v; }
-        else if (key == "拖尾间隔SPR缩放") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileTailScale[id, i] = v; }
-        else if (key == "拖尾间隔SPR高度修正") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileTailHeightOfs[id, i] = v; }
-        else if (key == "追踪模式") for (int id = 1; id < MaxPlayers; id++) ProjectileTraceMode[id, i] = int.Parse(value, CultureInfo.InvariantCulture);
-        else if (key == "追踪检测距离") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileTraceRadius[id, i] = v; }
+        else if (key == "拖尾间隔时间") ProjectileTailTime.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "拖尾间隔SPR播放速率") ProjectileTailFramerate.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "拖尾间隔SPR缩放") ProjectileTailScale.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "拖尾间隔SPR高度修正") ProjectileTailHeightOfs.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "追踪模式") ProjectileTraceMode.Set(i, int.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "追踪检测距离") ProjectileTraceRadius.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
         else if (key == "抛射物附带SPR")
         {
-            for (int id = 1; id < MaxPlayers; id++) ProjectileExtraSprite[id, i] = value;
+            ProjectileExtraSprite.Set(i, value);
             Engine.PrecacheModel(value);
         }
-        else if (key == "抛射物附带SPR播放速率") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ExtraSpriteFramerate[id, i] = v; }
-        else if (key == "抛射物附带SPR缩放") { float v = float.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ExtraSpriteScale[id, i] = v; }
-        else if (key == "抛射物发光") for (int id = 1; id < MaxPlayers; id++) ProjectileGlow[id, i] = int.Parse(value, CultureInfo.InvariantCulture);
-        else if (key == "抛射物发光半径") { int v = int.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileGlowRadius[id, i] = v; }
-        else if (key == "抛射物发光颜色R") { int v = int.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileGlowColor[id, i, 0] = v; }
-        else if (key == "抛射物发光颜色G") { int v = int.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileGlowColor[id, i, 1] = v; }
-        else if (key == "抛射物发光颜色B") { int v = int.Parse(value, CultureInfo.InvariantCulture); for (int id = 1; id < MaxPlayers; id++) ProjectileGlowColor[id, i, 2] = v; }
+        else if (key == "抛射物附带SPR播放速率") ExtraSpriteFramerate.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "抛射物附带SPR缩放") ExtraSpriteScale.Set(i, float.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "抛射物发光") ProjectileGlow.Set(i, int.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "抛射物发光半径") ProjectileGlowRadius.Set(i, int.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "抛射物发光颜色R") GlowColorR.Set(i, int.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "抛射物发光颜色G") GlowColorG.Set(i, int.Parse(value, CultureInfo.InvariantCulture));
+        else if (key == "抛射物发光颜色B") GlowColorB.Set(i, int.Parse(value, CultureInfo.InvariantCulture));
     }
 
     [AmxxCallback("WPN_PrimaryPreAttack")]
     public static int OnPrimaryPreAttack(int entityIndex, int id, int weaponIndex)
     {
-        if (WeaponAttackMode[id, weaponIndex] == WpnTypeProjectile)
+        if (WeaponAttackMode[weaponIndex] == WpnTypeProjectile)
             return WpnConst.WPN_HANDLED;
 
         return WpnConst.WPN_IGNORED;
@@ -166,7 +163,7 @@ public static unsafe partial class WeaponExtend
     [AmxxCallback("WPN_PrimaryPostAttack_Post")]
     public static void OnPrimaryPostAttackPost(int entityIndex, int id, int weaponIndex)
     {
-        if (WeaponAttackMode[id, weaponIndex] != WpnTypeProjectile)
+        if (WeaponAttackMode[weaponIndex] != WpnTypeProjectile)
             return;
 
         Wpn.GetParamString(weaponIndex, id, WpnConst.WpnSzKillSpr, out var weaponName, 63);

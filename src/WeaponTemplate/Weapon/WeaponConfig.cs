@@ -11,19 +11,16 @@ public sealed class WeaponConfig
 
     public int WeaponAmount => _templates.Count - 1;
 
-    public bool CanRegister => WeaponAmount < WpnConst.MaxTemplateCount;
-
     public bool IsTemplate(int index) => index > 0 && index < _templates.Count;
 
     public WeaponData this[int index] => IsTemplate(index) ? _templates[index] : Empty;
 
-    public bool TryCreate(out int index)
+    // 数量不设上限,实际容量由引擎预缓存等资源约束决定
+    public int Create()
     {
-        index = 0;
-        if (!CanRegister) return false;
-        index = _templates.Count;
+        int index = _templates.Count;
         _templates.Add(new WeaponData());
-        return true;
+        return index;
     }
 
     public bool HasSerial(int slot, int serial) => _serialNumbers[slot].ContainsKey(serial);

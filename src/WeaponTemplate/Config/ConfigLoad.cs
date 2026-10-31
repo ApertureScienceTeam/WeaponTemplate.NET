@@ -209,9 +209,9 @@ public static unsafe class ConfigLoad
         foreach (var (serialText, entries) in blocks)
         {
             int serial = ToInt(serialText);
-            if (serial <= 0 || WeaponStore.Config.HasSerial(slot, serial) || !WeaponStore.CanRegister)
+            if (serial <= 0 || WeaponStore.Config.HasSerial(slot, serial))
             {
-                MF.Log($"[error] invalid/duplicate template serial or capacity exceeded: {path} serial={serialText}");
+                MF.Log($"[error] invalid/duplicate template serial: {path} serial={serialText}");
                 continue;
             }
             int csw = slot == WpnConst.SlotKnife ? EngineConst.CswKnife :
@@ -239,7 +239,7 @@ public static unsafe class ConfigLoad
                 MF.Log($"[error] template rejected because a resource is missing: {path} serial={serial}");
                 continue;
             }
-            if (!WeaponStore.TryCreateTemplate(out int index)) continue;
+            int index = WeaponStore.CreateTemplate();
             WeaponStore.Config.SetSerial(slot, serial, index);
             WeaponStore.Config[index].Id = csw;
             MF.Log($"[diag] template slot={slot} serial={serial} index={index} csw={csw} " +

@@ -29,12 +29,12 @@ public static unsafe partial class Natives
         string weaponList, string killSpr, string pModel, string vModel, string wModel, string sightModel,
         string fireSound1, string fireSound2, string silencedFireSound1, string silencedFireSound2, string command)
     {
-        if (!WeaponStore.IsGun(weaponId) || !WeaponStore.CanRegister ||
+        if (!WeaponStore.IsGun(weaponId) ||
             !HasLength(weaponData.Length, WpnConst.MaxWeaponIntData) ||
             !HasLength(weaponFloatData.Length, WpnConst.MaxWeaponFloatData)) return 0;
         if (!PrecacheResources((pModel, false), (vModel, false), (wModel, false), (sightModel, false),
             (fireSound1, true), (fireSound2, true), (silencedFireSound1, true), (silencedFireSound2, true))) return 0;
-        if (!WeaponStore.TryCreateTemplate(out int i)) return 0;
+        int i = WeaponStore.CreateTemplate();
 
         var weapon = WeaponStore.Config[i];
         weapon.Id = weaponId;
@@ -132,10 +132,10 @@ public static unsafe partial class Natives
         string knifeSound1, string knifeSound2, string knifeSound3, string knifeSound4, string knifeSound5, string knifeSound6,
         [AmxxBuffer(WpnConst.MaxKnifeFloatData)] Span<float> knifeData, string command, int cost, int team)
     {
-        if (!WeaponStore.CanRegister || !HasLength(knifeData.Length, WpnConst.MaxKnifeFloatData)) return 0;
+        if (!HasLength(knifeData.Length, WpnConst.MaxKnifeFloatData)) return 0;
         if (!PrecacheResources((pModel, false), (vModel, false), (knifeSound1, true), (knifeSound2, true),
             (knifeSound3, true), (knifeSound4, true), (knifeSound5, true), (knifeSound6, true))) return 0;
-        if (!WeaponStore.TryCreateTemplate(out int i)) return 0;
+        int i = WeaponStore.CreateTemplate();
 
         var weapon = WeaponStore.Config[i];
         weapon.Id = EngineConst.CswKnife;
@@ -211,9 +211,9 @@ public static unsafe partial class Natives
         string explodeSound, float drawTime, float explodeTime, float range, float maxSpeed, float damage, float explodeSoundVolume,
         string command, int cost, int team, int wModelBody)
     {
-        if (!WeaponStore.CanRegister || !PrecacheResources((explodeSpr, false), (pModel, false),
+        if (!PrecacheResources((explodeSpr, false), (pModel, false),
             (vModel, false), (wModel, false), (explodeSound, true))) return 0;
-        if (!WeaponStore.TryCreateTemplate(out int i)) return 0;
+        int i = WeaponStore.CreateTemplate();
         int grenadeSprId = 0;
         if (explodeSpr.Length > 0) grenadeSprId = Engine.PrecacheModel(explodeSpr);
 

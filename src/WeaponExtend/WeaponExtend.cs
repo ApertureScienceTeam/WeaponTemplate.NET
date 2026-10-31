@@ -83,20 +83,17 @@ public static unsafe partial class WeaponExtend
 
     private static int PrecacheModel(string path)
     {
-        using var p = path.GetNativeString();
-        return EF.pfnPrecacheModel(p);
+        return EngineResources.PrecacheModel(path);
     }
 
     private static int PrecacheSound(string path)
     {
-        using var p = path.GetNativeString();
-        return EF.pfnPrecacheSound(p);
+        return EngineResources.PrecacheSound(path);
     }
 
     private static void SetModel(edict_t* ent, string model)
     {
-        using var m = model.GetNativeString();
-        EF.pfnSetModel(ent, m);
+        EF.pfnSetModel(ent, EngineStrings.Get(model));
     }
 
     private static void EmitSound(edict_t* ent, int channel, string sample, float volume, float attn, int flags, int pitch)
@@ -111,7 +108,8 @@ public static unsafe partial class WeaponExtend
     {
         using var f = field.GetNativeString();
         using var v = value.GetNativeString();
-        return EF.pfnFindEntityByString(start, f, v);
+        var found = EF.pfnFindEntityByString(start, f, v);
+        return found == null || IndexOf(found) == 0 ? null : found;
     }
 
     private static edict_t* CreateNamedEntity(string className)
@@ -185,6 +183,23 @@ public static unsafe partial class WeaponExtend
     private static int EnvSprite;      // g_iEnvSprite
     private static int SprBeamFollow;  // g_sprBeamFollow
 
+    static WeaponExtend() => ResetAll();
+
+    public static void ResetAll()
+    {
+        EngineResources.Reset();
+        foreach (var field in typeof(WeaponExtend).GetFields(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static))
+        {
+            if (field.GetValue(null) is string[,] strings)
+            {
+                for (int row = 0; row < strings.GetLength(0); row++)
+                    for (int col = 0; col < strings.GetLength(1); col++) strings[row, col] = "";
+            }
+            else if (field.GetValue(null) is Array array) Array.Clear(array);
+        }
+        InfoTarget = EnvSprite = SprBeamFollow = 0;
+    }
+
     // ---- 生命周期 ----
 
     [AmxxCallback("plugin_init")]
@@ -197,10 +212,18 @@ public static unsafe partial class WeaponExtend
     }
 
     [AmxxHook("pfnThink", Post = true)]
-    public static void ThinkPost(edict_t* pEntity) => ThinkLogic(pEntity);
+    public static void ThinkPost(edict_t* pEntity)
+    {
+        HookResult.Ignore();
+        ThinkLogic(pEntity);
+    }
 
     [AmxxHook("pfnTouch", Post = true)]
-    public static void TouchPost(edict_t* pEntity, edict_t* pOther) => TouchLogic(pEntity, pOther);
+    public static void TouchPost(edict_t* pEntity, edict_t* pOther)
+    {
+        HookResult.Ignore();
+        TouchLogic(pEntity, pOther);
+    }
 
     // ---- WPN forward 回调 ----
 
@@ -304,7 +327,7 @@ public static unsafe partial class WeaponExtend
     // ---- 回合开始清理 ----
 
     [AmxxCallback("wt_ExtendRoundStart")]
-    public static void OnRoundStart()
+    public static void OnRoundStart(int id)
     {
         var entity = EntOfIndex(0);
         while (entity != null && (entity = FindEntityByString(entity, "globalname", WpnProjectileName)) != null)
@@ -375,8 +398,8 @@ public static unsafe partial class WeaponExtend
             WriteCoord(origin[1]);
             WriteCoord(origin[2] + ProjectileExpHeightOfs[owner, i]);
             WriteShort(ProjectileExplodeSprite[owner, i]);
-            WriteByte((int)MathF.Round(ProjectileExpScale[owner, i] * 10.0f));
-            WriteByte((int)MathF.Round(ProjectileExpFramerate[owner, i] * 10.0f));
+            WriteByte(PawnMath.Round(ProjectileExpScale[owner, i] * 10.0f));
+            WriteByte(PawnMath.Round(ProjectileExpFramerate[owner, i] * 10.0f));
             WriteByte(explodeFlag);
             ModuleRuntime.g_engfuncs.pfnMessageEnd();
 
@@ -433,8 +456,8 @@ public static unsafe partial class WeaponExtend
             WriteCoord(origin[1]);
             WriteCoord(origin[2] + ProjectileTailHeightOfs[owner, i]);
             WriteShort(ProjectileTailSprite[owner, i]);
-            WriteByte((int)MathF.Round(ProjectileTailScale[owner, i] * 10.0f));
-            WriteByte((int)MathF.Round(ProjectileTailFramerate[owner, i] * 10.0f));
+            WriteByte(PawnMath.Round(ProjectileTailScale[owner, i] * 10.0f));
+            WriteByte(PawnMath.Round(ProjectileTailFramerate[owner, i] * 10.0f));
             WriteByte(WpnConst.TeExplFlagNoDlights | WpnConst.TeExplFlagNoSound | WpnConst.TeExplFlagNoParticles);
             ModuleRuntime.g_engfuncs.pfnMessageEnd();
             pev->fuser1 = GameTime + ProjectileTailTime[owner, i];
@@ -579,8 +602,8 @@ public static unsafe partial class WeaponExtend
             WriteCoord(origin[1]);
             WriteCoord(origin[2] + ProjectileExpHeightOfs[owner, i]);
             WriteShort(ProjectileExplodeSprite[owner, i]);
-            WriteByte((int)MathF.Round(ProjectileExpScale[owner, i] * 10.0f));
-            WriteByte((int)MathF.Round(ProjectileExpFramerate[owner, i] * 10.0f));
+            WriteByte(PawnMath.Round(ProjectileExpScale[owner, i] * 10.0f));
+            WriteByte(PawnMath.Round(ProjectileExpFramerate[owner, i] * 10.0f));
             WriteByte(explodeFlag);
             ModuleRuntime.g_engfuncs.pfnMessageEnd();
 
@@ -783,10 +806,9 @@ public static unsafe partial class WeaponExtend
 
     // ---- 工具函数 ----
 
-    private static int ParseInt(string value) => int.TryParse(value, out var v) ? v : 0;
+    private static int ParseInt(string value) => PawnMath.ParseInt(value);
 
-    private static float ParseFloat(string value) =>
-        float.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : 0f;
+    private static float ParseFloat(string value) => PawnMath.ParseFloat(value);
 
     private static float Distance(Span<float> a, Span<float> b)
     {
@@ -817,7 +839,7 @@ public static unsafe partial class WeaponExtend
         switch (mode)
         {
             case 1:
-                dest[0] = cp * sy; dest[1] = cp * cy; dest[2] = -sp;
+                dest[0] = cp * cy; dest[1] = cp * sy; dest[2] = -sp;
                 break;
             case 2:
                 dest[0] = -sr * sp * cy + cr * sy;
@@ -825,7 +847,7 @@ public static unsafe partial class WeaponExtend
                 dest[2] = -sr * cp;
                 break;
             case 3:
-                dest[0] = cr * sp * cy - sy * sr;
+                dest[0] = cr * sp * cy + sy * sr;
                 dest[1] = cr * sp * sy - cy * sr;
                 dest[2] = cr * cp;
                 break;

@@ -7,7 +7,7 @@ using GoldSrc.HLSDK.Native;
 namespace Module;
 
 // zp_newweapon.sma v1.0 的 C# 移植:加枪模板 & ZP4.3 兼容插件。
-// 依赖:WeaponTemplate 核心模块(在 modules.ini 中启用)与 zombieplague 模块。
+// 依赖:WeaponTemplate 核心模块与提供 zp_* native 的 Zombie Plague 4.3 Pawn 插件。
 // 原版说明:武器名字储存在 wpn_szUser1 里;购买命令为 empty 的武器不注册为 ZP 道具。
 public static unsafe partial class ZpNewWeapon
 {
@@ -19,6 +19,14 @@ public static unsafe partial class ZpNewWeapon
     // 购买子弹的道具id / 购买武器的道具id
     private static readonly int[] AmmoItemId = new int[2];
     private static readonly int[] ItemId = new int[MaxWeapon];
+
+    static ZpNewWeapon() => ResetAll();
+
+    public static void ResetAll()
+    {
+        Array.Fill(AmmoItemId, -1);
+        Array.Fill(ItemId, -1);
+    }
 
     // ---- 引擎小工具 ----
 
@@ -59,6 +67,7 @@ public static unsafe partial class ZpNewWeapon
     [AmxxCallback("plugin_init")]
     public static void OnPluginInit()
     {
+        ResetAll();
         // 取消所有玩家的购买(由 ZP 道具接管)
         for (int id = 1; id < MaxPlayers; id++)
             Wpn.SetParamInt(0, id, WpnConst.SetBuy, WpnConst.BuyCannot);
@@ -69,7 +78,7 @@ public static unsafe partial class ZpNewWeapon
 
         // 将每把武器都注册为ZP道具，购买命令为empty的除外
         int amount = Wpn.GetParamInt(0, 0, WpnConst.Amount);
-        for (int i = 1; i <= amount; i++)
+        for (int i = 1; i <= Math.Min(amount, MaxWeapon - 1); i++)
         {
             Wpn.GetParamString(i, 1, WpnConst.Command, out var weaponCmd, 63);
             if (weaponCmd == "empty" || weaponCmd.Length == 0)
@@ -100,6 +109,7 @@ public static unsafe partial class ZpNewWeapon
     [AmxxHook("pfnPlayerPostThink", Post = true)]
     public static void PlayerPostThinkPost(edict_t* pEntity)
     {
+        HookResult.Ignore();
         int id = IndexOf(pEntity);
         if (!IsConnected(id)) return;
         if (!IsBot(id)) return;
@@ -111,6 +121,7 @@ public static unsafe partial class ZpNewWeapon
     [AmxxCallback("zp_extra_item_selected")]
     public static int OnExtraItemSelected(int id, int itemId)
     {
+        if (itemId < 0) return 0;
         var pPlayer = EntOfIndex(id);
 
         if (itemId == AmmoItemId[0])
@@ -121,7 +132,7 @@ public static unsafe partial class ZpNewWeapon
                 int i = Core.WeaponTypeByIndex(IndexOf(entity));
                 Wpn.GiveAmmo(id, IndexOf(entity), i, 1);
             }
-            else return 1 /*PLUGIN_HANDLED*/;
+            else return Zp.PluginHandled;
         }
         else if (itemId == AmmoItemId[1])
         {
@@ -131,16 +142,17 @@ public static unsafe partial class ZpNewWeapon
                 int i = Core.WeaponTypeByIndex(IndexOf(entity));
                 Wpn.GiveAmmo(id, IndexOf(entity), i, 1);
             }
-            else return 1 /*PLUGIN_HANDLED*/;
+            else return Zp.PluginHandled;
         }
         else
         {
             int amount = Wpn.GetParamInt(0, 0, WpnConst.Amount);
-            for (int i = 1; i <= amount; i++)
+            for (int i = 1; i <= Math.Min(amount, MaxWeapon - 1); i++)
             {
                 if (ItemId[i] != itemId) continue;
 
                 int entityIndex = Wpn.GiveWeapon(id, i);
+                if (entityIndex <= 0) return Zp.PluginHandled;
                 Wpn.GiveAmmo(id, entityIndex, i, 1);
             }
         }
@@ -154,9 +166,9 @@ public static unsafe partial class ZpNewWeapon
         {
             if (index <= 0) return 0;
             var entity = EntOfIndex(index);
-            if (entity == null) return 0;
+            if (!IsValid(entity)) return 0;
             int serial = ((int*)entity->pvPrivateData)[11];
-            return serial >= 1 ? serial : 0;
+            return serial >= 1 && serial < MaxWeapon ? serial : 0;
         }
     }
 
@@ -197,10 +209,11 @@ internal static partial class Wpn
     public static partial void GiveAmmo(int id, int entity, int weaponIndex, int full);
 }
 
-// Zombie Plague 4.3 模块的 native 导入(要求 modules.ini 启用 zombieplague)
+// Zombie Plague 4.3 Pawn 插件提供的 native 导入。
 internal static partial class Zp
 {
-    public const int ZpTeamHuman = 0; // ZP_TEAM_HUMAN(zp_extra_item 的队伍位掩码)
+    public const int ZpTeamHuman = 1 << 1; // ZP_TEAM_HUMAN(zp_extra_item 的队伍位掩码)
+    public const int PluginHandled = 97; // ZP_PLUGIN_HANDLED:取消购买并退还弹药包。
 
     [AmxxImportNative("zp_register_extra_item")]
     public static partial int RegisterExtraItem(string name, int cost, int team);

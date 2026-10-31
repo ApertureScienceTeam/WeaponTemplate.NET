@@ -41,7 +41,7 @@ public static unsafe class Core
         switch (mode)
         {
             case EngineConst.AngleVectorForward:
-                dest[0] = cp * sy; dest[1] = cp * cy; dest[2] = -sp;
+                dest[0] = cp * cy; dest[1] = cp * sy; dest[2] = -sp;
                 break;
             case EngineConst.AngleVectorRight:
                 dest[0] = -sr * sp * cy + cr * sy;
@@ -49,7 +49,7 @@ public static unsafe class Core
                 dest[2] = -sr * cp;
                 break;
             case EngineConst.AngleVectorUp:
-                dest[0] = cr * sp * cy - sy * sr;
+                dest[0] = cr * sp * cy + sy * sr;
                 dest[1] = cr * sp * sy - cy * sr;
                 dest[2] = cr * cp;
                 break;
@@ -398,7 +398,7 @@ public static unsafe class Core
 
         if (Eng.GameTime > Store.DisableBuyTime)
         {
-            int seconds = (int)MathF.Round(Eng.CvarFloat("mp_buytime") * 60.0f);
+            int seconds = PawnMath.Round(Eng.CvarFloat("mp_buytime") * 60.0f);
             Eng.MessageBegin(EngineConst.MsgOne, Eng.UserMsgId("TextMsg"), null, p);
             Eng.WriteByte(1 << 2);
             Eng.WriteString("#Cant_buy");
@@ -445,6 +445,7 @@ public static unsafe class Core
         }
 
         entity = Eng.CreateNamedEntity(className);
+        if (!Eng.IsValid(entity)) return null;
         Eng.SetPDataInt(entity, 11, i);
         int slot = MF.CallNative("ExecuteHam", EngineConst.HamItemItemSlot, Eng.IndexOf(entity));
         var existing = Eng.GetPDataCbase(pPlayer, 365 + slot + 2);
@@ -477,7 +478,7 @@ public static unsafe class Core
     // public Native_GiveWeapon(id, i) — 模板发放入口
     public static int GiveWeaponByTemplate(int id, int i)
     {
-        if (!Eng.IsAlive(id)) return 0;
+        if (!Store.IsTemplate(i) || !Eng.IsAlive(id)) return 0;
 
         var pPlayer = Eng.EntOfIndex(id);
         if (pPlayer == null) return 0;

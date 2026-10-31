@@ -12,19 +12,51 @@ public static unsafe class Callbacks
     // 原版 KNIFE_COMMAND 等购买命令常量
     private const string KnifeCommand = "normal_knife";
 
+    // Pawn 插件每加载一次只跑一遍 plugin_init,register_message/RegisterHam 的注册项也随插件卸载一起释放;
+    // C# 模块常驻,plugin_init 可能被反复调用,逐次注册会把几百个 Ham/消息钩子叠加进去。
+    // 因此以 AMXX_PluginsLoaded 为轮次起点,每轮只允许注册一次。
+    // (AMXX 每局的顺序是 C_Spawn: 装插件 → 注册核心 forward → AMXX_PluginsLoaded → plugin_precache →
+    //  ServerActivate_Post 里才 plugin_init;PluginsLoaded 是这一轮里最早、且必定先于两者到达的钩子,
+    //  源生成器也正好在这里注册 [AmxxForward]。)
+    private static int InitCount;
+    private static int PrecacheCount;
+
+    // AMXX_PluginsLoaded:插件(含 bridge)加载/重载完成,开一轮新的注册窗口。
+    public static void ArmRegister()
+    {
+        EngineResources.Reset();
+        MF.Log($"[diag] plugins loaded t={Eng.GameTime:F2} init={InitCount}");
+        InitCount = 0;
+    }
+
     // ---- 生命周期 ----
 
     [AmxxCallback("plugin_precache")]
     public static void OnPrecache()
     {
+        MF.Log($"[diag] plugin_precache #{++PrecacheCount} t={Eng.GameTime:F2}");
         // Pawn 版每张地图重载插件即重置全局量;C# 模块常驻,这里显式重置
         Store.ResetAll();
         ConfigLoad.OnPrecache();
+        MF.Log($"[diag] plugin_precache done templates={Store.WeaponAmount}");
     }
 
     [AmxxCallback("plugin_init")]
     public static void OnPluginInit()
     {
+        int round = ++InitCount;
+        // 第 1、2 次各记一条,之后每 50 次一条:既能看出重复频率,又不会把日志刷爆。
+        if (round <= 2 || round % 50 == 0) MF.Log($"[diag] plugin_init #{round} t={Eng.GameTime:F2}");
+        if (round == 2)
+        {
+            // 谁在重复调用 plugin_init:托管栈里若出现本模块的 Execute_Wpn*/NotifyLoadFiles,
+            // 就是我们自己拿着 forward 句柄(0 = AMXX 的 plugin_init 广播)重播初始化;
+            // 只到 Invoke_0 为止则是 AMXX/其它插件直接驱动的。
+            MF.Log($"[diag] fwd loadFiles={ConfigLoad.LoadFilesForward} postFrame={NativeFunctionRegister.Fwd_WpnWeaponPostFrame} " +
+                $"idle={NativeFunctionRegister.Fwd_WpnWeaponIdle} damage={NativeFunctionRegister.Fwd_WpnTakeDamage}\n{Environment.StackTrace}");
+        }
+        if (round > 1) return;
+
         // ---- 消息 / 事件注册(原版 register_message / register_event / register_logevent) ----
         MF.CallNative("register_message", Eng.UserMsgId("DeathMsg"), "wt_DeathMsg");
         MF.CallNative("register_message", Eng.UserMsgId("TextMsg"), "wt_TextMsg");
@@ -35,7 +67,8 @@ public static unsafe class Callbacks
         MF.RegisterLogEvent("wt_FreezeEnd", 2, "1=Round_Start");
 
         // ---- 原版武器后备弹药表 / 血色 / 玩家倍率 ----
-        for (int i = 0; i < 32; i++) Store.GameWeaponMaxBpammo[i] = Store.GameWeaponMaxBpammoBase[i];
+        // 原版循环上界是 sizeof g_szWeaponMaxBpammo(31 个元素),不能写成 32
+        for (int i = 0; i < Store.GameWeaponMaxBpammoBase.Length; i++) Store.GameWeaponMaxBpammo[i] = Store.GameWeaponMaxBpammoBase[i];
         for (int id = 1; id < 33; id++)
         {
             Store.DamagePoint[id] = 1.0f;
@@ -44,8 +77,10 @@ public static unsafe class Callbacks
         }
         Store.BloodColor = 247;
         Core.ApplyDefaultSoundVolumes();
+        MF.Log($"[diag] state tables ready t={Eng.GameTime:F2}");
 
         // ---- Ham 注册(逐武器类名) ----
+        MF.Log($"[diag] msg/event registered t={Eng.GameTime:F2}");
         for (int i = 1; i < Store.GameWeaponClassName.Length; i++)
         {
             string className = Store.GameWeaponClassName[i];
@@ -64,6 +99,7 @@ public static unsafe class Callbacks
             MF.CallNative("RegisterHam", EngineConst.HamWeaponReload, className, "wt_WeaponReloadPost", 1);
             MF.CallNative("RegisterHam", EngineConst.HamWeaponWeaponIdle, className, "wt_WeaponWeaponIdle", 0);
         }
+        MF.Log($"[diag] per-weapon ham registered t={Eng.GameTime:F2}");
         MF.CallNative("RegisterHam", EngineConst.HamUse, "func_tank", "wt_UseStationaryPost", 1);
         MF.CallNative("RegisterHam", EngineConst.HamUse, "func_tankmortar", "wt_UseStationaryPost", 1);
         MF.CallNative("RegisterHam", EngineConst.HamUse, "func_tankrocket", "wt_UseStationaryPost", 1);
@@ -81,6 +117,7 @@ public static unsafe class Callbacks
         MF.CallNative("RegisterHam", EngineConst.HamTraceAttack, "func_door_rotating", "wt_TraceAttackPost", 1);
         MF.CallNative("RegisterHam", EngineConst.HamTraceAttack, "func_plat", "wt_TraceAttackPost", 1);
         MF.CallNative("RegisterHam", EngineConst.HamTraceAttack, "func_rotating", "wt_TraceAttackPost", 1);
+        MF.Log($"[diag] plugin_init done t={Eng.GameTime:F2}");
     }
 
     // ---- 事件回调 ----
@@ -465,6 +502,8 @@ public static unsafe class Callbacks
     [AmxxCallback("wt_WeaponPrimaryAttackPost")]
     public static void OnWeaponPrimaryAttackPost(int entityIndex)
     {
+        bool wasInPrimaryAttack = Store.IsInPrimaryAttack;
+        Store.IsInPrimaryAttack = false;
         var entity = Eng.EntOfIndex(entityIndex);
         if (entity == null) return;
         var pPlayer = Eng.GetPDataCbase(entity, 41);
@@ -482,14 +521,13 @@ public static unsafe class Callbacks
             }
             return;
         }
-        if (!Store.IsInPrimaryAttack) return;
+        if (!wasInPrimaryAttack) return;
 
         if (Eng.GetPDataInt(entity, 51) > 0)
         {
             int preResult = NativeFunctionRegister.Execute_WpnPrimaryPostAttack(entityIndex, id, i);
             if (preResult == WpnConst.WPN_SUPERCEDE) return;
         }
-        Store.IsInPrimaryAttack = false;
         if (Store.ClipAmmo[id] == 0 || Store.ClipAmmo[id] == Eng.GetPDataInt(entity, 51)) return;
 
         bool silenced = (Eng.GetPDataInt(entity, 74) & (1 << 2)) != 0 || (Eng.GetPDataInt(entity, 74) & (1 << 0)) != 0;
@@ -773,12 +811,12 @@ public static unsafe class Callbacks
                 if (valve < 1.0f) valve = 1.0f;
                 if (Store.SightMode[id] == WpnConst.AtoB)
                 {
-                    Eng.SetPDataInt(pPlayer, 363, Math.Max(Eng.GetPDataInt(pPlayer, 363) - (int)MathF.Round(valve), (int)MathF.Round(Store.SightDistance[id, i])));
+                    Eng.SetPDataInt(pPlayer, 363, Math.Max(Eng.GetPDataInt(pPlayer, 363) - PawnMath.Round(valve), PawnMath.Round(Store.SightDistance[id, i])));
                     Store.NextThink[id] = curTime + Store.SightOpenTime[id, i] / ((90.0f - Store.SightDistance[id, i]) / Store.SightFrameRate[id, i]);
                 }
                 else if (Store.SightMode[id] == WpnConst.BtoA)
                 {
-                    Eng.SetPDataInt(pPlayer, 363, Math.Min(Eng.GetPDataInt(pPlayer, 363) + (int)MathF.Round(valve), 90));
+                    Eng.SetPDataInt(pPlayer, 363, Math.Min(Eng.GetPDataInt(pPlayer, 363) + PawnMath.Round(valve), 90));
                     Store.NextThink[id] = curTime + Store.SightCloseTime[id, i] / ((90.0f - Store.SightDistance[id, i]) / Store.SightFrameRate[id, i]);
                 }
                 return EngineConst.HamIgnored;
@@ -1186,10 +1224,10 @@ public static unsafe class Callbacks
             if (found->v.solid <= EngineConst.SolidNot) continue;
             if (found->v.takedamage <= 0.0f) continue;
             var pOwner = Eng.EntOfIndex(ownerId);
-            if (victim != ownerId && pOwner != null && Eng.GetPDataInt(pOwner, 114) == Eng.GetPDataInt(found, 114) && Eng.CvarNum("mp_friendlyfire") == 0)
+            if (victim != ownerId && Eng.IsConnected(victim) && Eng.IsValid(pOwner) && Eng.GetPDataInt(pOwner, 114) == Eng.GetPDataInt(found, 114) && Eng.CvarNum("mp_friendlyfire") == 0)
                 continue;
 
-            MF.CallNative("ExecuteHamB", EngineConst.HamTakeDamage, victim, entityIndex, ownerId, 100.0f, 1 << 24);
+            Eng.TakeDamage(victim, entityIndex, ownerId, 100.0f, 1 << 24);
             NativeFunctionRegister.Execute_WpnHookGrenadeExplodePost(ownerId, entityIndex, victim, i);
         }
         Store.UserGrenadeId[ownerId] = 0;

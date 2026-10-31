@@ -16,7 +16,7 @@ public static unsafe class Attack
         int hit = hitGroup;
         if ((special & WpnConst.SpdmgCantHeadshot) != 0 && hit == EngineConst.HitHead) hit = EngineConst.HitStomach;
         var pAttacker = Eng.EntOfIndex(attacker);
-        if (pAttacker != null && (special & WpnConst.SpdmgTeamattack) == 0 &&
+        if (Eng.IsConnected(attacker) && pAttacker != null && (special & WpnConst.SpdmgTeamattack) == 0 &&
             Eng.GetPDataInt(pAttacker, 114) == Eng.GetPDataInt(pVictim, 114) && Eng.CvarNum("mp_friendlyfire") == 0)
             return false;
 
@@ -33,10 +33,10 @@ public static unsafe class Attack
                 case EngineConst.HitRightLeg:
                 case EngineConst.HitLeftLeg: damage *= 0.75f; break;
             }
-            Core.SpawnBlood(origin, Store.BloodColor, (int)damage);
+            Core.SpawnBlood(origin, Store.BloodColor, PawnMath.Round(damage));
         }
         Eng.SetPDataInt(pVictim, 75, hit);
-        MF.CallNative("ExecuteHamB", EngineConst.HamTakeDamage, victim, Eng.IndexOf(entity), attacker, damage, EngineConst.DmgNeverGib | EngineConst.DmgBullet);
+        Eng.TakeDamage(victim, Eng.IndexOf(entity), attacker, damage, EngineConst.DmgNeverGib | EngineConst.DmgBullet);
         return true;
     }
 
@@ -72,9 +72,9 @@ public static unsafe class Attack
             case WpnConst.DmgTypeSector:
             {
                 float distance = MathF.Tan(angle / 2.0f * MathF.PI / 180.0f) * range;
-                distance = (int)MathF.Round(distance);
-                int steps = (int)MathF.Round(distance * 2.0f / angleOffset);
-                int heightSteps = (int)MathF.Round(height / heightOffset);
+                distance = PawnMath.Round(distance);
+                int steps = PawnMath.Round(distance * 2.0f / angleOffset);
+                int heightSteps = PawnMath.Round(height / heightOffset);
                 int[] number = new int[2];
                 bool upSide = false;
 
@@ -126,10 +126,10 @@ public static unsafe class Attack
                                 if (className == "hostage_entity" || className == "monster_scientist")
                                 {
                                     hitWhat = WpnConst.HitPlayer;
-                                    Core.SpawnBlood(hitOrigin, Store.BloodColor, (int)damage);
+                                    Core.SpawnBlood(hitOrigin, Store.BloodColor, PawnMath.Round(damage));
                                 }
                                 Eng.SetPDataFloat(pHit2, 15, Eng.GameTime);
-                                MF.CallNative("ExecuteHamB", EngineConst.HamTakeDamage, pHit, Eng.IndexOf(entity), attacker, damage, EngineConst.DmgNeverGib | EngineConst.DmgBullet);
+                                Eng.TakeDamage(pHit, Eng.IndexOf(entity), attacker, damage, EngineConst.DmgNeverGib | EngineConst.DmgBullet);
                             }
                         }
                         else
@@ -174,9 +174,9 @@ public static unsafe class Attack
                             if (className == "hostage_entity" || className == "monster_scientist")
                             {
                                 hitWhat = WpnConst.HitPlayer;
-                                Core.SpawnBlood(hitOrigin, Store.BloodColor, (int)damage);
+                                Core.SpawnBlood(hitOrigin, Store.BloodColor, PawnMath.Round(damage));
                             }
-                            MF.CallNative("ExecuteHamB", EngineConst.HamTakeDamage, pHit, Eng.IndexOf(entity), attacker, damage, EngineConst.DmgNeverGib | EngineConst.DmgBullet);
+                            Eng.TakeDamage(pHit, Eng.IndexOf(entity), attacker, damage, EngineConst.DmgNeverGib | EngineConst.DmgBullet);
                         }
                     }
                 }
@@ -212,7 +212,7 @@ public static unsafe class Attack
                             hitWhat = WpnConst.HitEntity;
                             string className = Eng.ClassName(found);
                             if (className == "hostage_entity" || className == "monster_scientist") hitWhat = WpnConst.HitPlayer;
-                            MF.CallNative("ExecuteHamB", EngineConst.HamTakeDamage, pHit, Eng.IndexOf(entity), attacker, damage, EngineConst.DmgNeverGib | EngineConst.DmgBullet);
+                            Eng.TakeDamage(pHit, Eng.IndexOf(entity), attacker, damage, EngineConst.DmgNeverGib | EngineConst.DmgBullet);
                         }
                     }
                 }
@@ -236,9 +236,9 @@ public static unsafe class Attack
                         if (className == "hostage_entity" || className == "monster_scientist")
                         {
                             hitWhat = WpnConst.HitPlayer;
-                            Core.SpawnBlood(origin, Store.BloodColor, (int)damage);
+                            Core.SpawnBlood(origin, Store.BloodColor, PawnMath.Round(damage));
                         }
-                        MF.CallNative("ExecuteHamB", EngineConst.HamTakeDamage, pHit, Eng.IndexOf(entity), attacker, damage, EngineConst.DmgNeverGib | EngineConst.DmgBullet);
+                        Eng.TakeDamage(pHit, Eng.IndexOf(entity), attacker, damage, EngineConst.DmgNeverGib | EngineConst.DmgBullet);
                     }
                 }
                 else hitWhat = WpnConst.HitWall;
@@ -422,7 +422,7 @@ public static unsafe class Attack
         if (pPlayer == null) return;
         int id = Eng.IndexOf(pPlayer);
         int i = Store.GetWeaponType(entity);
-        if (Store.SightDistance[id, i] != 0.0f) Eng.SetPDataInt(pPlayer, 363, (int)MathF.Round(Store.SightDistance[id, i]));
+        if (Store.SightDistance[id, i] != 0.0f) Eng.SetPDataInt(pPlayer, 363, PawnMath.Round(Store.SightDistance[id, i]));
         Eng.SetViewModel(pPlayer, Store.WeaponVModelS[id, i]);
         Store.SightMode[id] = WpnConst.Open;
         Core.PlayAnim(id, Store.WeaponAnim[id, i, WpnConst.AnimIdle]);

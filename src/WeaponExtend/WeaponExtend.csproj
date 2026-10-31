@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
@@ -20,8 +20,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Amxmodx.Framework" Version="1.1.0" />
-		<PackageReference Include="Amxmodx.SourceGenerator" Version="1.1.0" PrivateAssets="all" />
+		<Compile Include="..\Shared\EngineStrings.cs" Link="EngineStrings.cs" />
+		<Compile Include="..\Shared\EngineResources.cs" Link="EngineResources.cs" />
+		<Compile Include="..\Shared\HookResult.cs" Link="HookResult.cs" />
+		<Compile Include="..\Shared\PawnMath.cs" Link="PawnMath.cs" />
+		<PackageReference Include="Amxmodx.Framework" Version="1.1.1-alpha.0.4" />
+		<PackageReference Include="Amxmodx.SourceGenerator" Version="1.1.1-alpha.0.4" PrivateAssets="all" />
 	</ItemGroup>
 
 </Project>

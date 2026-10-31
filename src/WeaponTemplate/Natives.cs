@@ -1,26 +1,40 @@
 using GoldSrc.Amxmodx;
 using GoldSrc.Amxmodx.Framework.Attributes;
+using GoldSrc.HLSDK;
 using GoldSrc.HLSDK.Native;
 
 namespace Module;
 
 // 原版 plugin_natives() 注册的 WPN_* native。
-// 与 Pawn 版的 ABI 差异:固定数组参数改为 (arr[], len) 约定(生成器要求 Span 后紧跟 int 长度)。
+// 固定数组使用 AmxxBuffer 描述长度,保持原版 Pawn 的参数数量和顺序。
 public static unsafe class Natives
 {
+    private static bool HasLength(int actual, int required) => actual >= required;
+
+    private static bool PrecacheResources(params (string Path, bool Sound)[] resources)
+    {
+        foreach (var (path, sound) in resources)
+        {
+            if (string.IsNullOrEmpty(path)) continue;
+            if ((sound ? Eng.PrecacheSound(path) : Eng.PrecacheModel(path)) <= 0) return false;
+        }
+        return true;
+    }
+
     // ---- 注册 ----
 
-    [AmxxNative]
-    public static int RegisterWeapon(int weaponId, Span<int> weaponData, int weaponDataLen, Span<float> weaponFloatData, int weaponFloatDataLen,
+    [AmxxNative("WPN_RegisterWeapon")]
+    public static int RegisterWeapon(int weaponId, [AmxxBuffer(WpnConst.MaxWeaponIntData)] Span<int> weaponData,
+        [AmxxBuffer(WpnConst.MaxWeaponFloatData)] Span<float> weaponFloatData,
         string weaponList, string killSpr, string pModel, string vModel, string wModel, string sightModel,
         string fireSound1, string fireSound2, string silencedFireSound1, string silencedFireSound2, string command)
     {
-        if (weaponId is EngineConst.CswKnife or EngineConst.CswHegrenade or EngineConst.CswFlashbang or EngineConst.CswSmokegrenade
-            or EngineConst.CswC4 or EngineConst.CswVest or EngineConst.CswVesthelm)
-            return 0;
-
-        Store.WeaponAmount++;
-        int i = Store.WeaponAmount;
+        if (!Store.IsGun(weaponId) || !Store.CanRegister ||
+            !HasLength(weaponData.Length, WpnConst.MaxWeaponIntData) ||
+            !HasLength(weaponFloatData.Length, WpnConst.MaxWeaponFloatData)) return 0;
+        if (!PrecacheResources((pModel, false), (vModel, false), (wModel, false), (sightModel, false),
+            (fireSound1, true), (fireSound2, true), (silencedFireSound1, true), (silencedFireSound2, true))) return 0;
+        if (!Store.TryCreateTemplate(out int i)) return 0;
 
         for (int id = 1; id < 33; id++)
         {
@@ -85,11 +99,14 @@ public static unsafe class Natives
         return i;
     }
 
-    [AmxxNative]
-    public static void SetWeaponAnim(int weaponIndex, int idle, int reload, int draw, Span<int> shoot, int shootLen, Span<int> shotgunReload, int shotgunReloadLen,
+    [AmxxNative("WPN_SetWeaponAnim")]
+    public static void SetWeaponAnim(int weaponIndex, int idle, int reload, int draw,
+        [AmxxBuffer(3)] Span<int> shoot, [AmxxBuffer(3)] Span<int> shotgunReload,
         int sightOpen, int sightClose, int detachSilencer, int attachSilencer, int idleSilenced, int reloadSilenced, int drawSilenced,
-        Span<int> silencedShoot, int silencedShootLen)
+        [AmxxBuffer(3)] Span<int> silencedShoot)
     {
+        if (!Store.IsTemplate(weaponIndex) || !HasLength(shoot.Length, 3) ||
+            !HasLength(shotgunReload.Length, 3) || !HasLength(silencedShoot.Length, 3)) return;
         int i = weaponIndex;
         for (int id = 1; id < 33; id++)
         {
@@ -115,13 +132,15 @@ public static unsafe class Natives
         }
     }
 
-    [AmxxNative]
+    [AmxxNative("WPN_RegisterKnife")]
     public static int RegisterKnife(string weaponList, string killSpr, string pModel, string vModel,
         string knifeSound1, string knifeSound2, string knifeSound3, string knifeSound4, string knifeSound5, string knifeSound6,
-        Span<float> knifeData, int knifeDataLen, string command, int cost, int team)
+        [AmxxBuffer(WpnConst.MaxKnifeFloatData)] Span<float> knifeData, string command, int cost, int team)
     {
-        Store.WeaponAmount++;
-        int i = Store.WeaponAmount;
+        if (!Store.CanRegister || !HasLength(knifeData.Length, WpnConst.MaxKnifeFloatData)) return 0;
+        if (!PrecacheResources((pModel, false), (vModel, false), (knifeSound1, true), (knifeSound2, true),
+            (knifeSound3, true), (knifeSound4, true), (knifeSound5, true), (knifeSound6, true))) return 0;
+        if (!Store.TryCreateTemplate(out int i)) return 0;
 
         for (int id = 1; id < 33; id++)
         {
@@ -176,10 +195,11 @@ public static unsafe class Natives
         return i;
     }
 
-    [AmxxNative]
+    [AmxxNative("WPN_SetKnifeAnim")]
     public static void SetKnifeAnim(int weaponIndex, int idle, int slash1, int slash2, int draw, int stab, int stabMiss, int midSlash, int midSlashMiss,
         int slashBegin, int stabBegin)
     {
+        if (!Store.IsTemplate(weaponIndex)) return;
         int i = weaponIndex;
         for (int id = 1; id < 33; id++)
         {
@@ -196,13 +216,14 @@ public static unsafe class Natives
         }
     }
 
-    [AmxxNative]
+    [AmxxNative("WPN_RegisterGrenade")]
     public static int RegisterGrenade(string weaponList, string killSpr, string explodeSpr, string pModel, string vModel, string wModel,
         string explodeSound, float drawTime, float explodeTime, float range, float maxSpeed, float damage, float explodeSoundVolume,
         string command, int cost, int team, int wModelBody)
     {
-        Store.WeaponAmount++;
-        int i = Store.WeaponAmount;
+        if (!Store.CanRegister || !PrecacheResources((explodeSpr, false), (pModel, false),
+            (vModel, false), (wModel, false), (explodeSound, true))) return 0;
+        if (!Store.TryCreateTemplate(out int i)) return 0;
         int grenadeSprId = 0;
         if (explodeSpr.Length > 0) grenadeSprId = Eng.PrecacheModel(explodeSpr);
 
@@ -237,32 +258,70 @@ public static unsafe class Natives
 
     // ---- 发放 / 攻击 / 特效 ----
 
-    [AmxxNative]
+    [AmxxNative("WPN_GiveWeapon")]
     public static int GiveWeapon(int id, int weaponIndex) => Core.GiveWeaponByTemplate(id, weaponIndex);
 
-    [AmxxNative]
-    public static int ExecuteAttack(int attacker, int victim, int entity, Span<float> param, int paramLen, Span<float> origin, int originLen,
+    [AmxxNative("WPN_ExecuteAttack")]
+    public static int ExecuteAttack(int attacker, int victim, int entity,
+        [AmxxBuffer(6)] Span<float> param, [AmxxBuffer(3)] Span<float> origin,
         int damageType, int special)
-        => Attack.CheckAttack(attacker, victim, Eng.EntOfIndex(entity), param, origin, damageType, special);
+    {
+        if (!HasLength(param.Length, 6) || !HasLength(origin.Length, 3)) return -1;
+        // 原版 get_array_f 复制到局部数组;CheckAttack 添加视角高度时不能写回调用方。
+        Span<float> attackOrigin = stackalloc float[3];
+        origin[..3].CopyTo(attackOrigin);
+        return Attack.CheckAttack(attacker, victim, Eng.EntOfIndex(entity), param[..6], attackOrigin, damageType, special);
+    }
 
-    [AmxxNative]
-    public static void SpawnBlood(Span<float> origin, int originLen, int color, int amount)
-        => Core.SpawnBlood(origin, color, amount);
+    [AmxxNative("WPN_SpawnBlood")]
+    public static void SpawnBlood([AmxxBuffer(3)] Span<float> origin, int color, int amount)
+    {
+        if (HasLength(origin.Length, 3)) Core.SpawnBlood(origin[..3], color, amount);
+    }
 
-    [AmxxNative]
-    public static void FakeSmoke(Span<float> origin, int originLen)
-        => Core.FakeSmoke(origin);
+    [AmxxNative("WPN_FakeSmoke")]
+    public static void FakeSmoke([AmxxBuffer(3)] Span<float> origin)
+    {
+        if (HasLength(origin.Length, 3)) Core.FakeSmoke(origin[..3]);
+    }
 
-    [AmxxNative]
+    [AmxxNative("WPN_GiveAmmo")]
     public static void GiveAmmo(int id, int entity, int weaponIndex, int full)
-        => Core.GiveAmmoForWeapon(id, entity, weaponIndex, full);
+    {
+        if (Store.IsPlayerIndex(id) && (weaponIndex == 0 || Store.IsTemplate(weaponIndex)))
+            Core.GiveAmmoForWeapon(id, entity, weaponIndex, full);
+    }
 
     // ---- 参数读取 ----
 
-    [AmxxNative]
+    [AmxxNative("WPN_GetParamInt")]
     public static int GetParamInt(int weaponIndex, int id, int type)
     {
         int i = weaponIndex;
+        switch (type)
+        {
+            case WpnConst.WpnID:
+                return id is >= 0 and < 3 ? (i > 0 && i < WpnConst.MaxWeapon ? Store.WeaponTemplateSerialNumber[id, i] : 0)
+                    : Core.WeaponTypeByIndex(id);
+            case WpnConst.WpnIAmount: return Store.WeaponAmount;
+            case WpnConst.WpnIBloodColor: return Store.BloodColor;
+            case WpnConst.WpnAllTeamBuy: return Store.AllTeamBuy;
+            case WpnConst.WpnIMaxMoney: return Store.MaxMoney;
+            case WpnConst.WpnIGameWeaponBPAmmo:
+                return i >= 0 && i < Store.GameWeaponMaxBpammo.Length ? Store.GameWeaponMaxBpammo[i] : -1;
+        }
+        if (!Store.IsPlayerIndex(id)) return -1;
+        switch (type)
+        {
+            case WpnConst.WpnSetBuy: return Store.BlockBuy[id];
+            case WpnConst.WpnIUserSight: return Store.SightMode[id];
+            case WpnConst.WpnIBotMoney: return Store.BotMoney[id];
+            case WpnConst.WpnIUserMoney: return Core.GetUserMoney(id);
+            case WpnConst.WpnIAttackEntity: return Store.AttackerEntity[id];
+            case WpnConst.WpnIGameCurWeaponBPAmmo:
+                return i >= 0 && i < Store.GameCurWeaponBPAmmo.GetLength(1) ? Store.GameCurWeaponBPAmmo[id, i] : -1;
+        }
+        if (!Store.IsTemplate(i)) return -1;
         switch (type)
         {
             case WpnConst.WpnIWeaponId: return Store.WeaponId[id, i];
@@ -327,11 +386,18 @@ public static unsafe class Natives
         return -1;
     }
 
-    [AmxxNative]
+    [AmxxNative("WPN_GetParamFloat")]
     public static float GetParamFloat(int weaponIndex, int id, int type)
     {
+        if (!Store.IsPlayerIndex(id)) return -1.0f;
+        switch (type)
+        {
+            case WpnConst.WpnFDamagePoint: return Store.DamagePoint[id];
+            case WpnConst.WpnFKnockBackPoint: return Store.KnockBackPoint[id];
+            case WpnConst.WpnFDamageVictimPoint: return Store.DamageVictimPoint[id];
+        }
         int i = weaponIndex;
-        if (i == 0) return -1.0f;
+        if (!Store.IsTemplate(i)) return -1.0f;
 
         switch (type)
         {
@@ -393,12 +459,31 @@ public static unsafe class Natives
         return -1.0f;
     }
 
-    [AmxxNative]
-    public static void GetParamString(int weaponIndex, int id, int type, out string value, int len)
+    [AmxxNative("WPN_GetParamString")]
+    public static void GetParamString(int weaponIndex, int id, int type, Span<int> output, int len)
+    {
+        if (len < 0) return;
+        GetParamStringValue(weaponIndex, id, type, out string value, len);
+        using var encoded = value.GetNativeString();
+        sbyte* source = encoded;
+        // Pawn passes charsmax: len writable bytes plus one NUL cell. The generated Span
+        // covers len cells; keep its original address even when len == 0.
+        ref int first = ref System.Runtime.InteropServices.MemoryMarshal.GetReference(output);
+        fixed (int* target = &first)
+        {
+            if (target == null) return;
+            int count = 0;
+            int limit = Math.Min(len, output.Length);
+            while (count < limit && source[count] != 0) { target[count] = (byte)source[count]; count++; }
+            target[count] = 0;
+        }
+    }
+
+    public static void GetParamStringValue(int weaponIndex, int id, int type, out string value, int len)
     {
         value = "";
         int i = weaponIndex;
-        if (i == 0) return;
+        if (!Store.IsPlayerIndex(id) || !Store.IsTemplate(i)) return;
 
         switch (type)
         {
@@ -424,21 +509,32 @@ public static unsafe class Natives
 
     // ---- 参数写入 ----
 
-    [AmxxNative]
+    [AmxxNative("WPN_SetParamInt")]
     public static void SetParamInt(int weaponIndex, int id, int type, int value)
     {
-        if (type == WpnConst.WpnIBloodColor) Store.BloodColor = value;
-        if (type == WpnConst.WpnAllTeamBuy) Store.AllTeamBuy = value;
-        if (type == WpnConst.WpnSetBuy) Store.BlockBuy[id] = value;
-        if (type == WpnConst.WpnIBotMoney) Store.BotMoney[id] = value;
-        if (type == WpnConst.WpnIGameWeaponBPAmmo) Store.GameWeaponMaxBpammo[weaponIndex] = value;
-        if (type == WpnConst.WpnIMaxMoney) Store.MaxMoney = value;
-        if (type == WpnConst.WpnIAttackEntity) Store.AttackerEntity[id] = value;
-        if (type == WpnConst.WpnIUserMoney) Core.SetUserMoney(id, value, weaponIndex);
-        if (type == WpnConst.WpnIHitGroup) Store.AttackHitGroup[id] = value;
-
         int i = weaponIndex;
-        if (i == 0) return;
+        switch (type)
+        {
+            case WpnConst.WpnIBloodColor: Store.BloodColor = value; return;
+            case WpnConst.WpnAllTeamBuy: Store.AllTeamBuy = value; return;
+            case WpnConst.WpnIMaxMoney: Store.MaxMoney = Math.Max(0, value); return;
+            case WpnConst.WpnIGameWeaponBPAmmo:
+                if (i >= 0 && i < Store.GameWeaponMaxBpammo.Length) Store.GameWeaponMaxBpammo[i] = value;
+                return;
+        }
+        if (!Store.IsPlayerIndex(id)) return;
+        switch (type)
+        {
+            case WpnConst.WpnSetBuy: Store.BlockBuy[id] = value; return;
+            case WpnConst.WpnIBotMoney: Store.BotMoney[id] = value; return;
+            case WpnConst.WpnIAttackEntity: Store.AttackerEntity[id] = value; return;
+            case WpnConst.WpnIUserMoney: Core.SetUserMoney(id, value, weaponIndex); return;
+            case WpnConst.WpnIHitGroup: Store.AttackHitGroup[id] = value; return;
+            case WpnConst.WpnIGameCurWeaponBPAmmo:
+                if (i >= 0 && i < Store.GameCurWeaponBPAmmo.GetLength(1)) Store.GameCurWeaponBPAmmo[id, i] = value;
+                return;
+        }
+        if (!Store.IsTemplate(i)) return;
 
         switch (type)
         {
@@ -490,15 +586,18 @@ public static unsafe class Natives
         }
     }
 
-    [AmxxNative]
+    [AmxxNative("WPN_SetParamFloat")]
     public static void SetParamFloat(int weaponIndex, int id, int type, float value)
     {
-        if (type == WpnConst.WpnFDamagePoint) Store.DamagePoint[id] = value;
-        if (type == WpnConst.WpnFKnockBackPoint) Store.KnockBackPoint[id] = value;
-        if (type == WpnConst.WpnFDamageVictimPoint) Store.DamageVictimPoint[id] = value;
-
+        if (!Store.IsPlayerIndex(id) || !float.IsFinite(value)) return;
+        switch (type)
+        {
+            case WpnConst.WpnFDamagePoint: Store.DamagePoint[id] = value; return;
+            case WpnConst.WpnFKnockBackPoint: Store.KnockBackPoint[id] = value; return;
+            case WpnConst.WpnFDamageVictimPoint: Store.DamageVictimPoint[id] = value; return;
+        }
         int i = weaponIndex;
-        if (i == 0) return;
+        if (!Store.IsTemplate(i) || !float.IsFinite(value)) return;
 
         switch (type)
         {
@@ -556,11 +655,14 @@ public static unsafe class Natives
         }
     }
 
-    [AmxxNative]
+    [AmxxNative("WPN_SetParamString")]
     public static void SetParamString(int weaponIndex, int id, int type, string value)
     {
         int i = weaponIndex;
-        if (i == 0) return;
+        if (!Store.IsPlayerIndex(id) || !Store.IsTemplate(i)) return;
+        value ??= "";
+        if (value.Length > 0 && type is >= WpnConst.WpnSzPModel and <= WpnConst.WpnSzSound6 &&
+            !EngineResources.Exists(value, type >= WpnConst.WpnSzSound1)) return;
 
         switch (type)
         {

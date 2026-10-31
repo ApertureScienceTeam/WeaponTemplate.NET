@@ -190,6 +190,35 @@ public static unsafe class Store
     public static readonly float[,] UserDeploy = new float[33, 2];
     public static readonly bool[] BuyingAmmo = new bool[33];
 
+    // 上面的静态表在类型初始化后不再写入,ResetAll 必须跳过它们:
+    // 一旦被清成 null/0,plugin_init 的 RegisterHam 循环会直接读到空类名。
+    private static readonly Array[] ReadOnlyTables =
+    {
+        GameWeaponClassName, GameWeaponBuyCommand, GameWeaponKillSpr, GameWeaponAmmoType,
+        GameWeaponDefaultTeam, GameWeaponDefaultCost, GameWeaponAmmoId, GameWeaponPosition,
+        GameWeaponSlot, GameWeaponMaxBpammoBase, PrimId, PrimCost, PrimAmount,
+        SecondId, SecondCost, SecAmount, GunshotDecals,
+    };
+
+    static Store() => ResetAll();
+
+    public static bool IsPlayerIndex(int id) => id >= 1 && id <= 32;
+    public static bool IsTemplate(int index) => index > 0 && index <= WeaponAmount && index < WpnConst.MaxWeapon;
+    public static bool CanRegister => WeaponAmount < WpnConst.MaxWeapon - 1;
+
+    public static bool IsGun(int csw) => csw > 0 && csw < GameWeaponClassName.Length &&
+        GameWeaponClassName[csw].Length > 0 && csw is not (EngineConst.CswKnife or EngineConst.CswHegrenade
+            or EngineConst.CswFlashbang or EngineConst.CswSmokegrenade or EngineConst.CswC4);
+
+    public static bool TryCreateTemplate(out int index)
+    {
+        index = 0;
+        if (!CanRegister) return false;
+        index = WeaponAmount + 1;
+        WeaponAmount = index;
+        return true;
+    }
+
     // GetWeaponType(iEntity) 的 C# 对应:读武器实体 11 号单元的模板序号。
     public static int GetWeaponType(GoldSrc.HLSDK.Native.edict_t* ent)
     {
@@ -205,10 +234,25 @@ public static unsafe class Store
         foreach (System.Reflection.FieldInfo field in typeof(Store).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
         {
             object? value = field.GetValue(null);
-            if (value is Array array)
-                Array.Clear(array);
+            if (value is not Array array) continue;
+            if (Array.IndexOf(ReadOnlyTables, array) >= 0) continue;
+            if (array is string[,] strings)
+            {
+                for (int row = 0; row < strings.GetLength(0); row++)
+                    for (int col = 0; col < strings.GetLength(1); col++) strings[row, col] = "";
+            }
+            else Array.Clear(array);
         }
 
+        DisableBuyTime = 0;
+        IsInPrimaryAttack = false;
+        BloodSpray = BloodDrop = SmokeId = BloodColor = 0;
+        AllTeamBuy = Round = 0;
+        RoundStart = RoundRestart = false;
+        Array.Fill(DamagePoint, 1.0f);
+        Array.Fill(DamageVictimPoint, 1.0f);
+        Array.Fill(KnockBackPoint, 1.0f);
+        Array.Copy(GameWeaponMaxBpammoBase, GameWeaponMaxBpammo, GameWeaponMaxBpammoBase.Length);
         // 常驻默认值
         MaxMoney = WpnConst.MaxMoney;
         BotForwardRegister = true;

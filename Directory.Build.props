@@ -1,0 +1,6 @@
+<Project>
+	<PropertyGroup>
+		<!-- bridge 构建工具从模块 DLL 旁加载 SDK，类库也需复制 NuGet 运行时依赖。 -->
+		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+	</PropertyGroup>
+</Project>

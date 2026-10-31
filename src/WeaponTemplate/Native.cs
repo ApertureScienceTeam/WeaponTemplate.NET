@@ -31,8 +31,7 @@ public static unsafe class Eng
 
     public static bool IsValidIndex(int index)
     {
-        var p = EF.pfnPEntityOfEntIndex(index);
-        return p != null && p->free == 0 && p->pvPrivateData != null;
+        return IsValid(EntOfIndex(index));
     }
 
     public static bool IsConnected(int id)
@@ -115,6 +114,7 @@ public static unsafe class Eng
     // (GoldSrc CBaseEntity 布局:[vtable][entvars_t* pev][...],x86 下 pev 在 +4)
     public static edict_t* GetPDataCbase(edict_t* ent, int offset)
     {
+        if (!IsValid(ent)) return null;
         var item = ((void**)ent->pvPrivateData)[offset];
         if (item == null) return null;
         var pev = *(entvars_t**)((byte*)item + 4);
@@ -141,22 +141,18 @@ public static unsafe class Eng
 
     // ---- 精确 / 模型 / 索引 ----
 
-    public static int PrecacheModel(string path)
-    {
-        using var p = path.GetNativeString();
-        return EF.pfnPrecacheModel(p);
-    }
+    public static int PrecacheModel(string path) => EngineResources.PrecacheModel(path);
+    public static int PrecacheSound(string path) => EngineResources.PrecacheSound(path);
 
-    public static int PrecacheSound(string path)
-    {
-        using var p = path.GetNativeString();
-        return EF.pfnPrecacheSound(p);
-    }
+    // ExecuteHamB 的前两个参数按值,any:... 后的标量按 Pawn 地址传递。
+    public static void TakeDamage(int victim, int inflictor, int attacker, float damage, int damageType)
+        => MF.CallNative("ExecuteHamB", EngineConst.HamTakeDamage, victim,
+            MF.Ref(inflictor), MF.Ref(attacker), MF.Ref(damage), MF.Ref(damageType));
 
     public static void SetModel(edict_t* ent, string model)
     {
-        using var m = model.GetNativeString();
-        EF.pfnSetModel(ent, m);
+        if (IsValid(ent) && !string.IsNullOrEmpty(model))
+            EF.pfnSetModel(ent, EngineStrings.Get(model));
     }
 
     public static int ModelIndex(string model)
@@ -184,16 +180,21 @@ public static unsafe class Eng
     {
         using var f = field.GetNativeString();
         using var v = value.GetNativeString();
-        return EF.pfnFindEntityByString(start, f, v);
+        var found = EF.pfnFindEntityByString(start, f, v);
+        return found == null || IndexOf(found) == 0 ? null : found;
     }
 
     public static edict_t* FindEntityInSphere(edict_t* start, float* origin, float radius)
-        => EF.pfnFindEntityInSphere(start, origin, radius);
+    {
+        var found = EF.pfnFindEntityInSphere(start, origin, radius);
+        return found == null || IndexOf(found) == 0 ? null : found;
+    }
 
     // ---- 声音 / 事件 ----
 
     public static void EmitSound(edict_t* ent, int channel, string sample, float volume, float attn, int flags, int pitch)
     {
+        if (string.IsNullOrEmpty(sample)) return;
         using var s = sample.GetNativeString();
         EF.pfnEmitSound(ent, channel, s, volume, attn, flags, pitch);
     }

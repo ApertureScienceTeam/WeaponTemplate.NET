@@ -27,7 +27,7 @@ public static unsafe class Buy
             return;
         }
 
-        var weaponBySlot = new edict_t*[2];
+        var weaponBySlot = new int[2];
         int specialWeapon0, specialWeapon1;
         string[] grenadeName = { "weapon_hegrenade", "weapon_smokegrenade", "weapon_flashbang" };
         int[] grenadeId = { EngineConst.CswHegrenade, EngineConst.CswSmokegrenade, EngineConst.CswFlashbang };
@@ -36,7 +36,7 @@ public static unsafe class Buy
         for (int i = 0; i < 2; i++)
         {
             var entity = Eng.GetPDataCbase(pPlayer, 368 + i);
-            if (Eng.IsValid(entity)) weaponBySlot[i] = entity;
+            if (Eng.IsValid(entity)) weaponBySlot[i] = Store.GetWeaponType(entity);
         }
 
         if (Store.BotMoney[id] >= 1000)
@@ -114,7 +114,7 @@ public static unsafe class Buy
                 if (!Core.CheckBuy(id)) continue;
                 if (Eng.GetPDataInt(pPlayer, 114) != Store.WeaponTeam[id, i] && Store.WeaponTeam[id, i] != 0) continue;
                 if (Store.BotMoney[id] < Store.WeaponCost[id, i]) continue;
-                if ((j == 0 && weaponBySlot[0] != null) || (j == 1 && weaponBySlot[1] != null)) continue;
+                if ((j == 0 && weaponBySlot[0] != 0) || (j == 1 && weaponBySlot[1] != 0)) continue;
                 if (Core.GetWeaponSlot(id, i, j + 1))
                 {
                     slotCount[j]++;
@@ -142,7 +142,7 @@ public static unsafe class Buy
             }
         }
 
-        if (slotCount[0] == 0 && slotCount[1] == 0 && weaponBySlot[0] == null && weaponBySlot[1] == null)
+        if (slotCount[0] == 0 && slotCount[1] == 0 && weaponBySlot[0] == 0 && weaponBySlot[1] == 0)
         {
             Core.SetUserMoney(id, Store.BotMoney[id]);
             Store.BotMoney[id] = 0;

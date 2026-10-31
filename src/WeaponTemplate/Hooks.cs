@@ -7,16 +7,16 @@ using GoldSrc.HLSDK.Native;
 namespace Module;
 
 // 原版 fakemeta forward(FM_*) 到 metamod 函数表 hook 的映射:
-//   FM_ClientCommand            -> GameDll pfnClientCommand(pre, SUPERCEDE=不调原版)
-//   FM_SetModel                 -> GameDll pfnSetModel(pre)
+//   FM_ClientCommand            -> GameDll pfnClientCommand(pre, 通过 mres 阻止原版)
+//   FM_SetModel                 -> Engine  pfnSetModel(pre)
 //   FM_UpdateClientData_Post    -> GameDll pfnUpdateClientData(post)
-//   FM_PlaybackEvent            -> GameDll pfnPlaybackEvent(pre)
+//   FM_PlaybackEvent            -> Engine  pfnPlaybackEvent(pre)
 //   FM_EmitSound                -> Engine  pfnEmitSound(pre)
 //   FM_TraceLine / FM_TraceHull -> Engine  pfnTraceLine / pfnTraceHull(pre)
 //   FM_PlayerPreThink           -> GameDll pfnPlayerPreThink(pre)
 //   FM_PlayerPostThink_Post     -> GameDll pfnPlayerPostThink(post)
 //   FM_Think_Post               -> GameDll pfnThink(post)
-// 调原版:gamedll 经 gpGamedllFuncs->dllapi_table,引擎经 g_engfuncs(绕过 hook,不递归)。
+// 未处理时由 Metamod 调原版;替换时才直接调用引擎并设置 SUPERCEDE。
 public static unsafe class Hooks
 {
     private const int FevHostOnly = 1 << 1;
@@ -26,11 +26,11 @@ public static unsafe class Hooks
     [AmxxHook("pfnClientCommand")]
     public static void ClientCommand(edict_t* pEntity)
     {
+        HookResult.Ignore();
         int id = Eng.IndexOf(pEntity);
         string command = Marshal.PtrToStringAnsi((nint)Eng.EF.pfnCmd_Argv(0)) ?? "";
         bool handled = ClientCommandLogic(id, command);
-        if (!handled)
-            ModuleRuntime.gpGamedllFuncs->dllapi_table->pfnClientCommand(pEntity);
+        if (handled) HookResult.Supercede();
     }
 
     // 原版 fw_ClientCommand;返回 true = FMRES_SUPERCEDE(不调用原版 gamedll)
@@ -300,7 +300,7 @@ public static unsafe class Hooks
         {
             string weaponListCommand = $"weapon_{Store.WeaponList[id, i]}";
             if (command == weaponListCommand) Eng.EngClientCommand(id, Store.GameWeaponClassName[Store.WeaponId[id, i]]);
-            if (command != Store.WeaponBuyCommand[id, i] && Store.WeaponBuyCommand[id, i].Length != 0)
+            if (string.IsNullOrEmpty(Store.WeaponBuyCommand[id, i]) || command != Store.WeaponBuyCommand[id, i])
                 continue;
 
             int result = NativeFunctionRegister.Execute_WpnBuyWeapon(id, command);
@@ -341,8 +341,8 @@ public static unsafe class Hooks
     [AmxxHook("pfnSetModel", Table = HookTable.Engine)]
     public static void SetModel(edict_t* pEntity, sbyte* model)
     {
-        if (SetModelLogic(pEntity)) return; // SUPERCEDE:已设置自定义模型
-        Eng.EF.pfnSetModel(pEntity, model);
+        HookResult.Ignore();
+        if (SetModelLogic(pEntity)) HookResult.Supercede();
     }
 
     private static bool SetModelLogic(edict_t* entity)
@@ -366,7 +366,7 @@ public static unsafe class Hooks
             entity->v.dmgtime = Eng.GameTime + Store.GrenadeData[id, i, 1];
             Eng.SetModel(entity, Store.WeaponWModel[id, i]);
             if (Store.WeaponWModelBody[id, i] != 0) entity->v.body = Store.WeaponWModelBody[id, i];
-            return true;
+            return !string.IsNullOrEmpty(Store.WeaponWModel[id, i]);
         }
         if (className != "weaponbox") return false;
 
@@ -390,7 +390,7 @@ public static unsafe class Hooks
         }
         Eng.SetModel(entity, Store.WeaponWModel[ownerId, type]);
         if (Store.WeaponWModelBody[ownerId, type] != 0) entity->v.body = Store.WeaponWModelBody[ownerId, type];
-        return true;
+        return !string.IsNullOrEmpty(Store.WeaponWModel[ownerId, type]);
     }
 
     // ---- fm_UpdateClientData_Post(阻止客户端预测开枪) ----
@@ -399,6 +399,7 @@ public static unsafe class Hooks
     [AmxxHook("pfnUpdateClientData", Post = true)]
     public static void UpdateClientDataPost(edict_t* pEntity, int sendWeapons, clientdata_t* cd)
     {
+        HookResult.Ignore();
         int id = Eng.IndexOf(pEntity);
         if (!Eng.IsAlive(id)) return;
 
@@ -421,33 +422,30 @@ public static unsafe class Hooks
     public static void PlaybackEvent(int flags, edict_t* pInvoker, ushort eventIndex, float delay, float* origin, float* angles,
         float fParam1, float fParam2, int iParam1, int iParam2, int bParam1, int bParam2)
     {
+        HookResult.Ignore();
         int id = Eng.IndexOf(pInvoker);
-        if (!Eng.IsConnected(id) || !Store.IsInPrimaryAttack) { CallOriginalPlayback(flags, pInvoker, eventIndex, delay, origin, angles, fParam1, fParam2, iParam1, iParam2, bParam1, bParam2); return; }
+        if (!Eng.IsConnected(id) || !Store.IsInPrimaryAttack) { return; }
 
         var pPlayer = Eng.EntOfIndex(id);
         var entity = pPlayer == null ? null : Eng.GetPDataCbase(pPlayer, 373);
         int i = Eng.IsValid(entity) ? Store.GetWeaponType(entity) : 0;
-        if (i == 0 || Store.WeaponId[id, i] == EngineConst.CswKnife) { CallOriginalPlayback(flags, pInvoker, eventIndex, delay, origin, angles, fParam1, fParam2, iParam1, iParam2, bParam1, bParam2); return; }
+        if (i == 0 || Store.WeaponId[id, i] == EngineConst.CswKnife) { return; }
 
         float recoil;
         if (Core.GetUserZoom(id) != 1 || Store.SightMode[id] == WpnConst.Open) recoil = Store.WeaponAimAccuracy[id, i];
         else recoil = Store.WeaponAccuracy[id, i];
         Eng.PlaybackEvent(flags | FevHostOnly, pInvoker, eventIndex, delay, origin, angles, fParam1 * recoil, fParam2 * recoil, iParam1, iParam2, bParam1, bParam2);
+        HookResult.Supercede();
     }
-
-    private static void CallOriginalPlayback(int flags, edict_t* pInvoker, ushort eventIndex, float delay, float* origin, float* angles,
-        float fParam1, float fParam2, int iParam1, int iParam2, int bParam1, int bParam2)
-        => Eng.EF.pfnPlaybackEvent(flags, pInvoker, eventIndex, delay, origin, angles, fParam1, fParam2, iParam1, iParam2, bParam1, bParam2);
 
     // ---- fm_EmitSound(刀子声音替换) ----
 
     [AmxxHook("pfnEmitSound", Table = HookTable.Engine)]
     public static void EmitSound(edict_t* pEntity, int channel, sbyte* sample, float volume, float attenuation, int flags, int pitch)
     {
-        if (!EmitSoundLogic(pEntity, channel, sample, volume, attenuation, flags, pitch))
-        {
-            Eng.EF.pfnEmitSound(pEntity, channel, sample, volume, attenuation, flags, pitch);
-        }
+        HookResult.Ignore();
+        if (EmitSoundLogic(pEntity, channel, sample, volume, attenuation, flags, pitch))
+            HookResult.Supercede();
     }
 
     private static bool EmitSoundLogic(edict_t* entity, int channel, sbyte* samplePtr, float volume, float attenuation, int flags, int pitch)
@@ -503,7 +501,7 @@ public static unsafe class Hooks
         {
             Eng.EmitSound(entity, EngineConst.ChanWeapon, Store.WeaponSound1[id, i], EngineConst.VolNorm, EngineConst.AttnNorm, 0, EngineConst.PitchNorm);
         }
-        return true;
+        return isSlash || isHit || isStab || isDeploy;
     }
 
     // ---- fm_TraceLine(散布 / 刀子轨迹) ----
@@ -511,10 +509,9 @@ public static unsafe class Hooks
     [AmxxHook("pfnTraceLine", Table = HookTable.Engine)]
     public static void TraceLine(float* vectorStart, float* vectorEnd, int ignoredMonster, edict_t* pentToSkip, TraceResult* ptr)
     {
-        if (!TraceLineLogic(vectorStart, vectorEnd, ignoredMonster, pentToSkip, ptr))
-        {
-            Eng.EF.pfnTraceLine(vectorStart, vectorEnd, ignoredMonster, pentToSkip, ptr);
-        }
+        HookResult.Ignore();
+        if (TraceLineLogic(vectorStart, vectorEnd, ignoredMonster, pentToSkip, ptr))
+            HookResult.Supercede();
     }
 
     private static bool TraceLineLogic(float* vectorStart, float* vectorEnd, int ignoredMonster, edict_t* pentToSkip, TraceResult* ptr)
@@ -538,12 +535,10 @@ public static unsafe class Hooks
             dir[0] /= 8192.0f; dir[1] /= 8192.0f; dir[2] /= 8192.0f;
             Span<float> forward = stackalloc float[3] { Eng.GP->v_forward.x, Eng.GP->v_forward.y, Eng.GP->v_forward.z };
             Core.VecSub(dir, forward, dir);
-            if (Core.GetUserZoom(id) != 1 || Store.SightMode[id] == WpnConst.Open)
-                Core.VecMulScalar(dir, Store.WeaponAimAccuracy[id, i], dir);
-            else if (Core.GetUserZoom(id) == 1 && Store.SightMode[id] != WpnConst.Open)
-                Core.VecMulScalar(dir, Store.WeaponAccuracy[id, i], dir);
-            else if ((Eng.GetPDataInt(activeItem, 74) & (1 << 2)) != 0 || (Eng.GetPDataInt(activeItem, 74) & (1 << 0)) != 0)
+            if ((Eng.GetPDataInt(activeItem, 74) & ((1 << 2) | (1 << 0))) != 0)
                 Core.VecMulScalar(dir, Store.WeaponSilencedAccuracy[id, i], dir);
+            else if (Core.GetUserZoom(id) != 1 || Store.SightMode[id] == WpnConst.Open)
+                Core.VecMulScalar(dir, Store.WeaponAimAccuracy[id, i], dir);
             else
                 Core.VecMulScalar(dir, Store.WeaponAccuracy[id, i], dir);
             Core.VecAdd(dir, forward, dir);
@@ -580,6 +575,7 @@ public static unsafe class Hooks
             Eng.TraceLine(start, end, ignoredMonster, pentToSkip, ptr);
             vectorEnd[0] = end[0]; vectorEnd[1] = end[1]; vectorEnd[2] = end[2];
         }
+        else return false;
         return true;
     }
 
@@ -588,10 +584,9 @@ public static unsafe class Hooks
     [AmxxHook("pfnTraceHull", Table = HookTable.Engine)]
     public static void TraceHull(float* vectorStart, float* vectorEnd, int ignoredMonster, int hull, edict_t* pentToSkip, TraceResult* ptr)
     {
-        if (!TraceHullLogic(vectorStart, vectorEnd, ignoredMonster, hull, pentToSkip, ptr))
-        {
-            Eng.EF.pfnTraceHull(vectorStart, vectorEnd, ignoredMonster, hull, pentToSkip, ptr);
-        }
+        HookResult.Ignore();
+        if (TraceHullLogic(vectorStart, vectorEnd, ignoredMonster, hull, pentToSkip, ptr))
+            HookResult.Supercede();
     }
 
     private static bool TraceHullLogic(float* vectorStart, float* vectorEnd, int ignoredMonster, int hull, edict_t* pentToSkip, TraceResult* ptr)
@@ -633,6 +628,7 @@ public static unsafe class Hooks
             Eng.TraceHull(start, end, ignoredMonster, hull, pentToSkip, ptr);
             vectorEnd[0] = end[0]; vectorEnd[1] = end[1]; vectorEnd[2] = end[2];
         }
+        else return false;
         return true;
     }
 
@@ -641,8 +637,8 @@ public static unsafe class Hooks
     [AmxxHook("pfnPlayerPreThink")]
     public static void PlayerPreThink(edict_t* pEntity)
     {
+        HookResult.Ignore();
         PlayerPreThinkLogic(pEntity);
-        ModuleRuntime.gpGamedllFuncs->dllapi_table->pfnPlayerPreThink(pEntity);
     }
 
     private static void PlayerPreThinkLogic(edict_t* pEntity)
@@ -686,10 +682,15 @@ public static unsafe class Hooks
     // ---- fm_PlayerPostThink_Post(刀子延迟攻击 + BOT 注册/购买) ----
 
     [AmxxHook("pfnPlayerPostThink", Post = true)]
-    public static void PlayerPostThinkPost(edict_t* pEntity) => PlayerPostThinkLogic(pEntity);
+    public static void PlayerPostThinkPost(edict_t* pEntity)
+    {
+        HookResult.Ignore();
+        PlayerPostThinkLogic(pEntity);
+    }
 
     private static void PlayerPostThinkLogic(edict_t* pEntity)
     {
+        HookResult.Ignore();
         int id = Eng.IndexOf(pEntity);
         if (!Eng.IsConnected(id)) return;
 
@@ -820,6 +821,7 @@ public static unsafe class Hooks
     [AmxxHook("pfnThink", Post = true)]
     public static void ThinkPost(edict_t* pEntity)
     {
+        HookResult.Ignore();
         if (!Eng.IsValid(pEntity)) return;
 
         string className = Eng.ClassName(pEntity);

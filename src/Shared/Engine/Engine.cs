@@ -8,7 +8,7 @@ namespace Module;
 // fakemeta native(pev/engfunc/dllfunc/get_pdata_*) 的 C# 对应物:
 // 引擎经 ModuleRuntime.g_engfuncs,实体数据经 edict->v(entvars_t)与 pvPrivateData 单元读写。
 // 偏移为 Windows 单元偏移(原版 linuxdiff 参数只作用于 Linux,Windows 偏移即原样数值)。
-public static unsafe partial class Eng
+public static unsafe partial class Engine
 {
     public static enginefuncs_t EF => ModuleRuntime.g_engfuncs;
     public static globalvars_t* GP => ModuleRuntime.gpGlobals;
@@ -144,11 +144,6 @@ public static unsafe partial class Eng
     public static int PrecacheModel(string path) => EngineResources.PrecacheModel(path);
     public static int PrecacheSound(string path) => EngineResources.PrecacheSound(path);
 
-    // HamSandwich.ExecuteHamB(Ham_TakeDamage) 的标量参数按 Pawn 地址传递,回调内可修改(SetHamParamFloat 依赖这一点)。
-    public static void TakeDamage(int victim, int inflictor, int attacker, float damage, int damageType)
-        => HamSandwich.ExecuteHamB(EngineConst.HamTakeDamage, victim,
-            ref inflictor, ref attacker, ref damage, ref damageType);
-
     public static void SetModel(edict_t* ent, string model)
     {
         if (IsValid(ent) && !string.IsNullOrEmpty(model))
@@ -190,6 +185,12 @@ public static unsafe partial class Eng
         return found == null || IndexOf(found) == 0 ? null : found;
     }
 
+    // Span 友好重载(内部 fixed 转指针)
+    public static edict_t* FindEntityInSphere(edict_t* start, Span<float> origin, float radius)
+    {
+        fixed (float* p = origin) return FindEntityInSphere(start, p, radius);
+    }
+
     // ---- 声音 / 事件 ----
 
     public static void EmitSound(edict_t* ent, int channel, string sample, float volume, float attn, int flags, int pitch)
@@ -211,6 +212,12 @@ public static unsafe partial class Eng
         fixed (float* p = angles) EF.pfnMakeVectors(p);
     }
 
+    // engfunc VecToAngles:方向向量 -> 欧拉角
+    public static void VecToAngles(Span<float> vecIn, Span<float> anglesOut)
+    {
+        fixed (float* pIn = vecIn, pOut = anglesOut) EF.pfnVecToAngles(pIn, pOut);
+    }
+
     public static void TraceLine(Span<float> start, Span<float> end, int flags, edict_t* skip, TraceResult* ptr)
     {
         fixed (float* pStart = start, pEnd = end) EF.pfnTraceLine(pStart, pEnd, flags, skip, ptr);
@@ -230,8 +237,11 @@ public static unsafe partial class Eng
         return EF.pfnRegUserMsg(n, -1);
     }
 
-    public static void MessageBegin(int dest, int type, float* origin, edict_t* entity)
-        => EF.pfnMessageBegin(dest, type, origin, entity);
+    // Span 友好重载(内部 fixed 转指针);origin 传 null 表示无原点(全局广播)
+    public static void MessageBegin(int dest, int type, Span<float> origin, edict_t* entity)
+    {
+        fixed (float* p = origin) EF.pfnMessageBegin(dest, type, p, entity);
+    }
 
     public static void MessageEnd() => EF.pfnMessageEnd();
     public static void WriteByte(int v) => EF.pfnWriteByte(v);
@@ -248,15 +258,4 @@ public static unsafe partial class Eng
     }
 
     public static void WriteEntity(int v) => EF.pfnWriteEntity(v);
-
-    // ---- 玩家中心文字(client_print print_center;文本经 TextMsg 消息下发) ----
-
-    public static void ClientPrintCenter(int id, string message)
-        => AmxModX.ClientPrint(id, EngineConst.PrintCenter, message);
-
-    public static void EngClientCommand(int id, string command, string? argument = null)
-    {
-        if (argument == null) AmxModX.EngClientCmd(id, command);
-        else AmxModX.EngClientCmd(id, command, argument);
-    }
 }

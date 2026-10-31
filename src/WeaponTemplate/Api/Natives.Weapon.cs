@@ -21,19 +21,19 @@ public static unsafe partial class Natives
         // 原版 get_array_f 复制到局部数组;CheckAttack 添加视角高度时不能写回调用方。
         Span<float> attackOrigin = stackalloc float[3];
         origin[..3].CopyTo(attackOrigin);
-        return Attack.CheckAttack(attacker, victim, Eng.EntOfIndex(entity), param[..6], attackOrigin, damageType, special);
+        return Attack.CheckAttack(attacker, victim, Engine.EntOfIndex(entity), param[..6], attackOrigin, damageType, special);
     }
 
     [AmxxNative("WPN_SpawnBlood")]
     public static void SpawnBlood([AmxxBuffer(3)] Span<float> origin, int color, int amount)
     {
-        if (HasLength(origin.Length, 3)) Effects.SpawnBlood(origin[..3], color, amount);
+        if (HasLength(origin.Length, 3)) WeaponEffects.SpawnBlood(origin[..3], color, amount);
     }
 
     [AmxxNative("WPN_FakeSmoke")]
     public static void FakeSmoke([AmxxBuffer(3)] Span<float> origin)
     {
-        if (HasLength(origin.Length, 3)) Effects.FakeSmoke(origin[..3]);
+        if (HasLength(origin.Length, 3)) WeaponEffects.FakeSmoke(origin[..3]);
     }
 
     [AmxxNative("WPN_GiveAmmo")]

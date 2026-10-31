@@ -56,7 +56,7 @@ public static unsafe class VectorMath
     // stock get_position(id, forw, right, up, vStart[])
     public static void GetPosition(int id, float forward, float right, float up, Span<float> start)
     {
-        var pPlayer = Eng.EntOfIndex(id);
+        var pPlayer = Engine.EntOfIndex(id);
         if (pPlayer == null) return;
         var pev = pPlayer->v;
 
@@ -80,7 +80,7 @@ public static unsafe class VectorMath
     // stock fm_get_aim_origin(id, origin[])
     public static void GetAimOrigin(int id, Span<float> origin)
     {
-        var pPlayer = Eng.EntOfIndex(id);
+        var pPlayer = Engine.EntOfIndex(id);
         if (pPlayer == null) return;
         var pev = pPlayer->v;
 
@@ -89,13 +89,13 @@ public static unsafe class VectorMath
         VecAdd(start, viewOfs, start);
 
         Span<float> angles = stackalloc float[3] { pev.v_angle.x, pev.v_angle.y, pev.v_angle.z };
-        Eng.MakeVectors(angles);
-        Span<float> dest = stackalloc float[3] { Eng.GP->v_forward.x, Eng.GP->v_forward.y, Eng.GP->v_forward.z };
+        Engine.MakeVectors(angles);
+        Span<float> dest = stackalloc float[3] { Engine.GP->v_forward.x, Engine.GP->v_forward.y, Engine.GP->v_forward.z };
         VecMulScalar(dest, 9999.0f, dest);
         VecAdd(start, dest, dest);
 
         TraceResult trace = default;
-        Eng.TraceLine(start, dest, 0, pPlayer, &trace);
+        Engine.TraceLine(start, dest, 0, pPlayer, &trace);
         origin[0] = trace.vecEndPos.x;
         origin[1] = trace.vecEndPos.y;
         origin[2] = trace.vecEndPos.z;

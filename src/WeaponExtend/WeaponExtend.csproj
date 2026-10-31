@@ -21,10 +21,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Include="..\Shared\EngineStrings.cs" Link="EngineStrings.cs" />
-		<Compile Include="..\Shared\EngineResources.cs" Link="EngineResources.cs" />
-		<Compile Include="..\Shared\HookResult.cs" Link="HookResult.cs" />
-		<Compile Include="..\Shared\PawnMath.cs" Link="PawnMath.cs" />
+		<Compile Include="..\Shared\Consts\WpnConst.cs" Link="Consts\WpnConst.cs" />
+		<Compile Include="..\Shared\Consts\EngineConst.cs" Link="Consts\EngineConst.cs" />
+		<Compile Include="..\Shared\Engine\Engine.cs" Link="Engine\Engine.cs" />
+		<Compile Include="..\Shared\Engine\EngineStrings.cs" Link="Engine\EngineStrings.cs" />
+		<Compile Include="..\Shared\Engine\EngineResources.cs" Link="Engine\EngineResources.cs" />
+		<Compile Include="..\Shared\Engine\HookResult.cs" Link="Engine\HookResult.cs" />
+		<Compile Include="..\Shared\Math\VectorMath.cs" Link="Math\VectorMath.cs" />
+		<Compile Include="..\Shared\Math\FloatMath.cs" Link="Math\FloatMath.cs" />
 		<PackageReference Include="Amxmodx.Framework" Version="1.1.1-alpha.0.4" />
 		<PackageReference Include="Amxmodx.SourceGenerator" Version="1.1.1-alpha.0.4" PrivateAssets="all" />
 	</ItemGroup>

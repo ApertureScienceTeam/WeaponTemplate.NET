@@ -10,30 +10,30 @@ public static unsafe class PlayerStocks
 
     public static int GetUserMoney(int id)
     {
-        var p = Eng.EntOfIndex(id);
-        return p == null ? 0 : Eng.GetPDataInt(p, 115);
+        var p = Engine.EntOfIndex(id);
+        return p == null ? 0 : Engine.GetPDataInt(p, 115);
     }
 
     // stock fm_set_user_money(id, iMoney, iFlash = 1)
     public static void SetUserMoney(int id, int money, int flash = 1)
     {
-        var p = Eng.EntOfIndex(id);
+        var p = Engine.EntOfIndex(id);
         if (p == null) return;
         money = Math.Min(money, WeaponStore.MaxMoney);
-        Eng.SetPDataInt(p, 115, money);
-        int msg = Eng.UserMsgId("Money");
-        Eng.MessageBegin(EngineConst.MsgOne, msg, null, p);
-        Eng.WriteLong(money);
-        Eng.WriteByte(flash);
-        Eng.MessageEnd();
+        Engine.SetPDataInt(p, 115, money);
+        int msg = Engine.UserMsgId("Money");
+        Engine.MessageBegin(EngineConst.MsgOne, msg, null, p);
+        Engine.WriteLong(money);
+        Engine.WriteByte(flash);
+        Engine.MessageEnd();
     }
 
     public static int GetUserBpAmmo(int id, int weaponId)
     {
         int offset = BpAmmoOffset(weaponId);
         if (offset < 0) return 0;
-        var p = Eng.EntOfIndex(id);
-        return p == null ? 0 : Eng.GetPDataInt(p, offset);
+        var p = Engine.EntOfIndex(id);
+        return p == null ? 0 : Engine.GetPDataInt(p, offset);
     }
 
     public static void SetUserBpAmmo(int id, int weaponId, int amount)
@@ -44,9 +44,9 @@ public static unsafe class PlayerStocks
             MF.Log($"fm_cs_set_user_bpammo: Invalid weapon id {weaponId}");
             return;
         }
-        var p = Eng.EntOfIndex(id);
+        var p = Engine.EntOfIndex(id);
         if (p == null) return;
-        Eng.SetPDataInt(p, offset, amount);
+        Engine.SetPDataInt(p, offset, amount);
     }
 
     // 原版 fm_cs_(get|set)_user_bpammo 的偏移表
@@ -71,9 +71,9 @@ public static unsafe class PlayerStocks
 
     public static int GetUserZoom(int id)
     {
-        var p = Eng.EntOfIndex(id);
+        var p = Engine.EntOfIndex(id);
         if (p == null) return 0;
-        int value = Eng.GetPDataInt(p, 363);
+        int value = Engine.GetPDataInt(p, 363);
         return value switch
         {
             0x5A => 1,
@@ -88,12 +88,12 @@ public static unsafe class PlayerStocks
     // stock PlayAnim(id, anim)
     public static void PlayAnim(int id, int anim)
     {
-        var p = Eng.EntOfIndex(id);
+        var p = Engine.EntOfIndex(id);
         if (p == null) return;
         p->v.weaponanim = anim;
-        Eng.MessageBegin(EngineConst.MsgOne, EngineConst.SvcWeaponAnim, null, p);
-        Eng.WriteByte(anim);
-        Eng.WriteByte(p->v.body);
-        Eng.MessageEnd();
+        Engine.MessageBegin(EngineConst.MsgOne, EngineConst.SvcWeaponAnim, null, p);
+        Engine.WriteByte(anim);
+        Engine.WriteByte(p->v.body);
+        Engine.MessageEnd();
     }
 }

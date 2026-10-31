@@ -20,20 +20,19 @@ WeaponTemplate.NET/
 ├── Example/                     # 原版示例配置(主武器副武器/投掷/近战示例.ini)
 ├── artifacts/                   # publish 产物(三个原生 DLL)
 └── src/
+    ├── Shared/                  # 三模块共用的移植兼容层(csproj 按类型分文件夹链接)
+    │   ├── Consts/              # WpnConst(wpn_const.inc 唯一翻译) + EngineConst(引擎常量唯一翻译)
+    │   ├── Engine/              # Engine(fakemeta/HLSDK 封装唯一实现) + EngineStrings(引擎字符串池) + EngineResources(precache 下标缓存) + HookResult(metamod mres)
+    │   └── Math/                # VectorMath(向量/角度/弹道起点) + FloatMath(floatround 语义标量舍入)
     ├── WeaponTemplate/          # 核心模块(WeaponTemplate.sma 的移植)
-    │   ├── Module.cs            # 入口 partial class(源生成器补全 17 个固定导出)
-    │   ├── Lifecycle/           # 插件生命周期:PluginLifecycle.cs(precache/init/PluginsLoaded + 全量注册)
-    │   ├── Consts/              # WpnConst(wpn_const.inc) + EngineConst(CSW/TE/Ham/按钮等)
-    │   ├── Data/                # WeaponData/WeaponConfig(模板) + PlayerData + WeaponStore(状态枢纽) + GameTables(静态表)
-    │   ├── Engine/              # Eng.cs:fakemeta(pev/engfunc/get_pdata)的 HLSDK 直接访问封装
-    │   ├── Api/                 # 对 Pawn 的接口:Natives(注册/发放/参数) + Forwards(WPN_* 事件)
-    │   ├── Interop/             # 生态 native 声明式导入([AmxxImportNative],按来源模块分文件:HamSandwich/AmxModX/FakeMeta)
-    │   ├── Hooks/               # [AmxxHook] metamod 函数表 hook(按 ClientCommand/SetModel/Trace/PlayerThink 等分文件)
-    │   ├── Callbacks/           # [AmxxCallback] Ham/消息/事件回调(按 Events/Messages/Ham 分文件)
-    │   ├── Features/            # 业务逻辑:ConfigLoad(INI)/WeaponGive(发放)/WeaponAmmo(弹药)/PlayerStocks(金钱备弹焦距)/VectorMath(向量)/Effects(血烟雾)/Attack/Buy
-    │   └── include/             # Pawn 侧 include(与原版逐字节一致)
-    ├── WeaponExtend/            # WeaponExtend.sma(抛射物/范围攻击扩展)的移植
-    └── ZpNewWeapon/             # zp_newweapon.sma(ZP4.3 兼容胶水)的移植
+    │   ├── Module.cs            # 插件主入口:ModuleRuntime 钩子配置 + AMXX_PluginsLoaded/plugin_precache/plugin_init + 全量注册
+    │   ├── Weapon/              # 武器模板域:WeaponData/WeaponConfig/WeaponStore(状态枢纽)/GameTables/WeaponGive(发放)/WeaponAmmo(弹药+Ham回调)/Attack(攻击+开火Ham回调+引擎拦截)/WeaponDeploy(部署+SetModel)/WeaponDamage(伤害+手雷引爆)/WeaponView(模型与击杀图标)/WeaponEffects(血液弹着点烟雾)/RoundEvents(回合事件)
+    │   ├── Player/              # 玩家域:PlayerData/PlayerStocks(金钱备弹焦距)/Buy(购买资格+BOT购买+购买命令拦截)/PlayerThink(移动节拍)/PlayerEvents(生成/购买区图标)
+    │   ├── Config/              # 配置域:ConfigLoad(中文 INI 解析/编码探测)
+    │   ├── Api/                 # 对 Pawn 的接口:C# 导出实现(Natives 注册/发放/参数读写 + Forwards 事件) + Pawn/(.inc 契约,与 C# 导出一一对应,与原版逐字节一致)
+    │   ├── Interop/             # 生态 native 声明式导入([AmxxImportNative],按来源模块分文件:HamSandwich/AmxModX/FakeMeta,含少量组合封装)
+    ├── WeaponExtend/            # WeaponExtend.sma(抛射物/范围攻击扩展):WeaponExtend.cs(入口/WPN 回调) + Projectile(抛射物) + Support(业务辅助) + Wpn.cs(核心模块 native 导入);引擎/数学走 Shared
+    └── ZpNewWeapon/             # zp_newweapon.sma(ZP4.3 兼容胶水):ZpNewWeapon.cs(入口/回调) + Wpn.cs/Zp.cs(native 导入);引擎走 Shared
 ```
 
 ## 机制映射(Pawn → C#/GoldSrcMod.Net)

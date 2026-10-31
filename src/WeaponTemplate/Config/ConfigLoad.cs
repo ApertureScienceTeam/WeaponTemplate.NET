@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using GoldSrc.Amxmodx;
 using GoldSrc.Amxmodx.Native;
@@ -6,8 +7,9 @@ using GoldSrc.HLSDK.Native;
 namespace Module;
 
 // plugin_precache + LoadWeapon/LoadKnife/LoadGrenade 的翻译:
-// 每行 key=value,分号开头为注释;模型/声音在解析时预缓存;
-// 每个键值对触发一次 WPN_LoadFiles 广播(在 preCache 阶段手动注册的 forward)。
+// 每行 key=value;';' 开头的整行与值内 ';' 起的行内注释都会在读入层剥掉,
+// 因此数值解析用严格的 int.Parse/float.Parse(配错值会响亮报错,而不是像原版 str_to_num 那样静默截断成 0);
+// 模型/声音在解析时预缓存;每个键值对触发一次 WPN_LoadFiles 广播(在 preCache 阶段手动注册的 forward)。
 public static unsafe class ConfigLoad
 {
     // WPN_LoadFiles forward 句柄(原版 g_fwLoadFiles;因需在 precache 阶段触发,手动注册)
@@ -22,7 +24,7 @@ public static unsafe class ConfigLoad
         WeaponStore.BloodSpray = PrecacheAndProbe("sprites/bloodspray.spr");
         WeaponStore.BloodDrop = PrecacheAndProbe("sprites/blood.spr");
         WeaponStore.SmokeId = PrecacheAndProbe("sprites/smokepuff.spr");
-        WeaponStore.DisableBuyTime = Eng.GameTime + Eng.CvarFloat("mp_buytime") * 60.0f;
+        WeaponStore.DisableBuyTime = Engine.GameTime + Engine.CvarFloat("mp_buytime") * 60.0f;
 
         LoadFilesForward = MF.RegisterForward("WPN_LoadFiles", ForwardExecType.ET_CONTINUE,
             ForwardParam.FP_CELL, ForwardParam.FP_CELL, ForwardParam.FP_STRING, ForwardParam.FP_STRING);
@@ -46,11 +48,11 @@ public static unsafe class ConfigLoad
         return resolved != null && File.Exists(resolved) ? resolved : null;
     }
 
-    // 预缓存同时记录引擎返回的 model index;Eng.PrecacheModel 内部已探测文件存在性,
+    // 预缓存同时记录引擎返回的 model index;Engine.PrecacheModel 内部已探测文件存在性,
     // 缺失时跳过并告警(避免把不存在的资源放进下载列表卡死客户端)。
     private static int PrecacheAndProbe(string path)
     {
-        int index = Eng.PrecacheModel(path);
+        int index = Engine.PrecacheModel(path);
         MF.Log($"[diag] precache {path} index={index}");
         return index;
     }
@@ -118,13 +120,31 @@ public static unsafe class ConfigLoad
 
             var key = line[..split].Trim();
             var value = line[(split + 1)..].Trim();
+
+            // 行内注释:';' 起到行尾忽略(原版靠 str_to_num 的前缀语义容忍;现在在读入层统一剥掉,
+            // 下游 WPN_LoadFiles 广播的也是剥好的值,消费方可以直接用严格的 int.Parse/float.Parse)
+            int comment = value.IndexOf(';');
+            if (comment >= 0)
+                value = value[..comment].Trim();
+
             result.Add((key, value));
         }
         return result;
     }
 
-    private static int ToInt(string value) => PawnMath.ParseInt(value);
-    private static float ToFloat(string value) => PawnMath.ParseFloat(value);
+    // 数值解析:读入层已剥掉行内注释,这里做严格整串解析(InvariantCulture,与 Pawn 只认 '.' 一致)。
+    // 配错值记 [error] 并按 0 继续——保持"单个坏键不拖垮整个模板加载"的原版容忍度,但失败是响亮的。
+    private static int ToInt(string value)
+    {
+        try { return int.Parse(value, CultureInfo.InvariantCulture); }
+        catch (Exception e) { MF.Log($"[error] 数值解析失败: '{value}' ({e.GetType().Name}),按 0 处理"); return 0; }
+    }
+
+    private static float ToFloat(string value)
+    {
+        try { return float.Parse(value, CultureInfo.InvariantCulture); }
+        catch (Exception e) { MF.Log($"[error] 数值解析失败: '{value}' ({e.GetType().Name}),按 0 处理"); return 0; }
+    }
 
     // SoundVolume 的解析规则:val > 0 时取 max(1-val, 0),否则用默认值
     private static float ToAttenuation(string value, float fallback)
@@ -211,7 +231,7 @@ public static unsafe class ConfigLoad
                 bool sound = key is "开枪声音1" or "开枪声音2" or "消音开枪声音1" or "消音开枪声音2" or
                     "掏出声音" or "击墙声音" or "击空声音" or "重击声音" or "轻击声音1" or "轻击声音2" or "爆炸声音路径" ||
                     (slot == WpnConst.SlotGrenade && key == "爆炸声音");
-                if ((model || sound) && (sound ? Eng.PrecacheSound(value) : Eng.PrecacheModel(value)) <= 0)
+                if ((model || sound) && (sound ? Engine.PrecacheSound(value) : Engine.PrecacheModel(value)) <= 0)
                     resourcesValid = false;
             }
             if (!resourcesValid)
@@ -289,42 +309,42 @@ public static unsafe class ConfigLoad
             else if (key == "P模型")
             {
                 WeaponStore.Config[template.Index].PModel = value;
-                if (value.Length > 0) Eng.PrecacheModel(value);
+                if (value.Length > 0) Engine.PrecacheModel(value);
             }
             else if (key == "V模型")
             {
                 WeaponStore.Config[template.Index].VModel = value;
-                if (value.Length > 0) Eng.PrecacheModel(value);
+                if (value.Length > 0) Engine.PrecacheModel(value);
             }
             else if (key == "W模型")
             {
                 WeaponStore.Config[template.Index].WModel = value;
-                if (value.Length > 0) Eng.PrecacheModel(value);
+                if (value.Length > 0) Engine.PrecacheModel(value);
             }
             else if (key == "机瞄模型")
             {
                 WeaponStore.Config[template.Index].SightModel = value;
-                if (value.Length > 0) Eng.PrecacheModel(value);
+                if (value.Length > 0) Engine.PrecacheModel(value);
             }
             else if (key == "开枪声音1")
             {
                 WeaponStore.Config[template.Index].Sound1 = value;
-                if (value.Length > 0) Eng.PrecacheSound(value);
+                if (value.Length > 0) Engine.PrecacheSound(value);
             }
             else if (key == "开枪声音2")
             {
                 WeaponStore.Config[template.Index].Sound2 = value;
-                if (value.Length > 0) Eng.PrecacheSound(value);
+                if (value.Length > 0) Engine.PrecacheSound(value);
             }
             else if (key == "消音开枪声音1")
             {
                 WeaponStore.Config[template.Index].Sound3 = value;
-                if (value.Length > 0) Eng.PrecacheSound(value);
+                if (value.Length > 0) Engine.PrecacheSound(value);
             }
             else if (key == "消音开枪声音2")
             {
                 WeaponStore.Config[template.Index].Sound4 = value;
-                if (value.Length > 0) Eng.PrecacheSound(value);
+                if (value.Length > 0) Engine.PrecacheSound(value);
             }
             else if (key == "开枪声音大小") { float v = ToAttenuation(value, 0.35f); WeaponStore.Config[template.Index].FireSoundVolume = v; }
             else if (key == "消音开枪声音大小") { float v = ToAttenuation(value, EngineConst.AttnNorm); WeaponStore.Config[template.Index].SilenceFireSoundVolume = v; }
@@ -387,42 +407,42 @@ public static unsafe class ConfigLoad
             else if (key == "P模型")
             {
                 WeaponStore.Config[template.Index].PModel = value;
-                if (value.Length > 0) Eng.PrecacheModel(value);
+                if (value.Length > 0) Engine.PrecacheModel(value);
             }
             else if (key == "V模型")
             {
                 WeaponStore.Config[template.Index].VModel = value;
-                if (value.Length > 0) Eng.PrecacheModel(value);
+                if (value.Length > 0) Engine.PrecacheModel(value);
             }
             else if (key == "掏出声音")
             {
                 WeaponStore.Config[template.Index].Sound1 = value;
-                if (value.Length > 0) Eng.PrecacheSound(value);
+                if (value.Length > 0) Engine.PrecacheSound(value);
             }
             else if (key == "击墙声音")
             {
                 WeaponStore.Config[template.Index].Sound2 = value;
-                if (value.Length > 0) Eng.PrecacheSound(value);
+                if (value.Length > 0) Engine.PrecacheSound(value);
             }
             else if (key == "击空声音")
             {
                 WeaponStore.Config[template.Index].Sound3 = value;
-                if (value.Length > 0) Eng.PrecacheSound(value);
+                if (value.Length > 0) Engine.PrecacheSound(value);
             }
             else if (key == "重击声音")
             {
                 WeaponStore.Config[template.Index].Sound4 = value;
-                if (value.Length > 0) Eng.PrecacheSound(value);
+                if (value.Length > 0) Engine.PrecacheSound(value);
             }
             else if (key == "轻击声音1")
             {
                 WeaponStore.Config[template.Index].Sound5 = value;
-                if (value.Length > 0) Eng.PrecacheSound(value);
+                if (value.Length > 0) Engine.PrecacheSound(value);
             }
             else if (key == "轻击声音2")
             {
                 WeaponStore.Config[template.Index].Sound6 = value;
-                if (value.Length > 0) Eng.PrecacheSound(value);
+                if (value.Length > 0) Engine.PrecacheSound(value);
             }
             else if (key == "击墙声音大小") { float v = ToAttenuation(value, EngineConst.AttnNorm); WeaponStore.Config[template.Index].KnifeSoundVolume[0] = v; }
             else if (key == "击空声音大小") { float v = ToAttenuation(value, EngineConst.AttnNorm); WeaponStore.Config[template.Index].KnifeSoundVolume[1] = v; }
@@ -466,28 +486,28 @@ public static unsafe class ConfigLoad
             else if (key == "P模型")
             {
                 WeaponStore.Config[template.Index].PModel = value;
-                if (value.Length > 0) Eng.PrecacheModel(value);
+                if (value.Length > 0) Engine.PrecacheModel(value);
             }
             else if (key == "V模型")
             {
                 WeaponStore.Config[template.Index].VModel = value;
-                if (value.Length > 0) Eng.PrecacheModel(value);
+                if (value.Length > 0) Engine.PrecacheModel(value);
             }
             else if (key == "W模型")
             {
                 WeaponStore.Config[template.Index].WModel = value;
-                if (value.Length > 0) Eng.PrecacheModel(value);
+                if (value.Length > 0) Engine.PrecacheModel(value);
             }
             else if (key == "爆炸SPR")
             {
                 int sprId = 0;
-                if (value.Length > 0) sprId = Eng.PrecacheModel(value);
+                if (value.Length > 0) sprId = Engine.PrecacheModel(value);
                 WeaponStore.Config[template.Index].GrenadeSprId = sprId;
             }
             else if (key == "爆炸声音")
             {
                 WeaponStore.Config[template.Index].Sound1 = value;
-                if (value.Length > 0) Eng.PrecacheSound(value);
+                if (value.Length > 0) Engine.PrecacheSound(value);
             }
             else if (key == "爆炸声音大小") { float v = ToAttenuation(value, 0.25f); WeaponStore.Config[template.Index].FireSoundVolume = v; }
             else if (key == "购买命令") { WeaponStore.Config[template.Index].BuyCommand = value; }

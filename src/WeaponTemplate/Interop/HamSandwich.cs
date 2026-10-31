@@ -28,4 +28,11 @@ internal static partial class HamSandwich
 
     [AmxxImportNative("SetHamParamFloat")]
     public static partial void SetHamParamFloat(int paramIndex, float value);
+
+    // ---- 组合封装(基于以上导入) ----
+
+    // ExecuteHamB(Ham_TakeDamage):标量参数按 Pawn 地址传递,回调内可修改(SetHamParamFloat 依赖这一点)
+    public static void TakeDamage(int victim, int inflictor, int attacker, float damage, int damageType)
+        => ExecuteHamB(EngineConst.HamTakeDamage, victim,
+            ref inflictor, ref attacker, ref damage, ref damageType);
 }

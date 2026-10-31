@@ -4,19 +4,19 @@ using GoldSrc.HLSDK.Native;
 namespace Module;
 
 // public BotBuyWeaponEvent(id) 的翻译:BOT 进入购买区后模拟购买。
-public static unsafe class Buy
+public static unsafe partial class Buy
 {
     public static void BotBuyWeaponEvent(int id)
     {
-        if (!Eng.IsAlive(id)) return;
-        if (!Eng.IsBot(id)) return;
+        if (!Engine.IsAlive(id)) return;
+        if (!Engine.IsBot(id)) return;
 
         if (!WeaponStore.Player(id).BotBuyWeapon) return;
 
-        var pPlayer = Eng.EntOfIndex(id);
+        var pPlayer = Engine.EntOfIndex(id);
         if (pPlayer == null) return;
 
-        WeaponStore.Player(id).BotMoney += Eng.GetPDataInt(pPlayer, 115);
+        WeaponStore.Player(id).BotMoney += Engine.GetPDataInt(pPlayer, 115);
         if (WeaponStore.Player(id).BotMoney > WeaponStore.MaxMoney) WeaponStore.Player(id).BotMoney = WeaponStore.MaxMoney;
         PlayerStocks.SetUserMoney(id, 0);
 
@@ -35,8 +35,8 @@ public static unsafe class Buy
 
         for (int i = 0; i < 2; i++)
         {
-            var entity = Eng.GetPDataCbase(pPlayer, 368 + i);
-            if (Eng.IsValid(entity)) weaponBySlot[i] = WeaponStore.GetWeaponType(entity);
+            var entity = Engine.GetPDataCbase(pPlayer, 368 + i);
+            if (Engine.IsValid(entity)) weaponBySlot[i] = WeaponStore.GetWeaponType(entity);
         }
 
         if (WeaponStore.Player(id).BotMoney >= 1000)
@@ -48,39 +48,39 @@ public static unsafe class Buy
             {
                 WeaponStore.Player(id).BotMoney -= 1000;
                 pPlayer->v.armorvalue = 100.0f;
-                Eng.SetPDataInt(pPlayer, 112, 2);
-                Eng.MessageBegin(EngineConst.MsgOne, Eng.UserMsgId("ArmorType"), null, pPlayer);
-                Eng.WriteByte(1);
-                Eng.MessageEnd();
-                Eng.EmitSound(pPlayer, EngineConst.ChanItem, "items/ammopickup2.wav", EngineConst.VolNorm, EngineConst.AttnNorm, 1 << 0, EngineConst.PitchNorm);
+                Engine.SetPDataInt(pPlayer, 112, 2);
+                Engine.MessageBegin(EngineConst.MsgOne, Engine.UserMsgId("ArmorType"), null, pPlayer);
+                Engine.WriteByte(1);
+                Engine.MessageEnd();
+                Engine.EmitSound(pPlayer, EngineConst.ChanItem, "items/ammopickup2.wav", EngineConst.VolNorm, EngineConst.AttnNorm, 1 << 0, EngineConst.PitchNorm);
             }
         }
 
-        if (WeaponStore.Player(id).BotMoney >= 200 && Eng.GetPDataInt(pPlayer, 114) == 2)
+        if (WeaponStore.Player(id).BotMoney >= 200 && Engine.GetPDataInt(pPlayer, 114) == 2)
         {
             specialWeapon1 = WpnConst.SwDefuser;
             specialWeapon0 = 0;
             int postResult = NativeFunctionRegister.Execute_WpnBotBuyWeaponPost(id, specialWeapon0, specialWeapon1);
             bool canBuy = false;
-            for (var found = Eng.FindEntityByString(null, "classname", "func_bomb_target"); found != null; found = Eng.FindEntityByString(found, "classname", "func_bomb_target"))
+            for (var found = Engine.FindEntityByString(null, "classname", "func_bomb_target"); found != null; found = Engine.FindEntityByString(found, "classname", "func_bomb_target"))
                 canBuy = true;
             if (postResult != WpnConst.WPN_SUPERCEDE && canBuy && Buy.CheckBuy(id))
             {
                 pPlayer->v.body = 1;
-                int defuseKitSkill = Eng.GetPDataInt(pPlayer, 193);
+                int defuseKitSkill = Engine.GetPDataInt(pPlayer, 193);
                 if ((defuseKitSkill & (1 << 16)) == 0)
                 {
                     defuseKitSkill |= 1 << 16;
-                    Eng.SetPDataInt(pPlayer, 193, defuseKitSkill);
-                    Eng.MessageBegin(EngineConst.MsgOne, Eng.UserMsgId("StatusIcon"), null, pPlayer);
-                    Eng.WriteByte(1);
-                    Eng.WriteString("defuser");
-                    Eng.WriteByte(0);
-                    Eng.WriteByte(160);
-                    Eng.WriteByte(0);
-                    Eng.MessageEnd();
+                    Engine.SetPDataInt(pPlayer, 193, defuseKitSkill);
+                    Engine.MessageBegin(EngineConst.MsgOne, Engine.UserMsgId("StatusIcon"), null, pPlayer);
+                    Engine.WriteByte(1);
+                    Engine.WriteString("defuser");
+                    Engine.WriteByte(0);
+                    Engine.WriteByte(160);
+                    Engine.WriteByte(0);
+                    Engine.MessageEnd();
                     WeaponStore.Player(id).BotMoney -= 200;
-                    Eng.EmitSound(pPlayer, EngineConst.ChanAuto, "items/gunpickup2.wav", EngineConst.VolNorm, EngineConst.AttnNorm, 0, EngineConst.PitchNorm);
+                    Engine.EmitSound(pPlayer, EngineConst.ChanAuto, "items/gunpickup2.wav", EngineConst.VolNorm, EngineConst.AttnNorm, 0, EngineConst.PitchNorm);
                 }
             }
         }
@@ -96,7 +96,7 @@ public static unsafe class Buy
                 {
                     if (slotCount[j] != 0)
                     {
-                        int wpnId = slotCandidates[j, Eng.RandomNum(1, slotCount[j])];
+                        int wpnId = slotCandidates[j, Engine.RandomNum(1, slotCount[j])];
                         specialWeapon1 = 0;
                         specialWeapon0 = wpnId;
                         if (j == 3) specialWeapon1 = WpnConst.SwHegrenade;
@@ -112,7 +112,7 @@ public static unsafe class Buy
                 }
                 if (WeaponStore.Weapon(id, i).BuyCommand == "empty") continue;
                 if (!Buy.CheckBuy(id)) continue;
-                if (Eng.GetPDataInt(pPlayer, 114) != WeaponStore.Weapon(id, i).Team && WeaponStore.Weapon(id, i).Team != 0) continue;
+                if (Engine.GetPDataInt(pPlayer, 114) != WeaponStore.Weapon(id, i).Team && WeaponStore.Weapon(id, i).Team != 0) continue;
                 if (WeaponStore.Player(id).BotMoney < WeaponStore.Weapon(id, i).Cost) continue;
                 if ((j == 0 && weaponBySlot[0] != 0) || (j == 1 && weaponBySlot[1] != 0)) continue;
                 if (WeaponAmmo.GetWeaponSlot(id, i, j + 1))
@@ -154,23 +154,23 @@ public static unsafe class Buy
     public static bool CheckBuy(int id)
     {
         if (WeaponStore.Player(id).BlockBuy == WpnConst.BuyCannot) return false;
-        if (WeaponStore.Player(id).BlockBuy == WpnConst.BuyEverywhere && Eng.IsAlive(id)) return true;
-        if (!Eng.IsAlive(id)) return false;
+        if (WeaponStore.Player(id).BlockBuy == WpnConst.BuyEverywhere && Engine.IsAlive(id)) return true;
+        if (!Engine.IsAlive(id)) return false;
 
-        var p = Eng.EntOfIndex(id);
+        var p = Engine.EntOfIndex(id);
         if (p == null) return false;
 
-        if ((Eng.GetPDataInt(p, 235) & (1 << 0)) == 0 && !Eng.IsBot(id)) return false;
-        if (Eng.IsBot(id) && !WeaponStore.Player(id).BotBuyWeapon) return false;
+        if ((Engine.GetPDataInt(p, 235) & (1 << 0)) == 0 && !Engine.IsBot(id)) return false;
+        if (Engine.IsBot(id) && !WeaponStore.Player(id).BotBuyWeapon) return false;
 
-        if (Eng.GameTime > WeaponStore.DisableBuyTime)
+        if (Engine.GameTime > WeaponStore.DisableBuyTime)
         {
-            int seconds = PawnMath.Round(Eng.CvarFloat("mp_buytime") * 60.0f);
-            Eng.MessageBegin(EngineConst.MsgOne, Eng.UserMsgId("TextMsg"), null, p);
-            Eng.WriteByte(1 << 2);
-            Eng.WriteString("#Cant_buy");
-            Eng.WriteString(seconds.ToString());
-            Eng.MessageEnd();
+            int seconds = FloatMath.Round(Engine.CvarFloat("mp_buytime") * 60.0f);
+            Engine.MessageBegin(EngineConst.MsgOne, Engine.UserMsgId("TextMsg"), null, p);
+            Engine.WriteByte(1 << 2);
+            Engine.WriteString("#Cant_buy");
+            Engine.WriteString(seconds.ToString());
+            Engine.MessageEnd();
             return false;
         }
         return true;

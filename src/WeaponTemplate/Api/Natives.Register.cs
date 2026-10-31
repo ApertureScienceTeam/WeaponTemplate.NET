@@ -16,7 +16,7 @@ public static unsafe partial class Natives
         foreach (var (path, sound) in resources)
         {
             if (string.IsNullOrEmpty(path)) continue;
-            if ((sound ? Eng.PrecacheSound(path) : Eng.PrecacheModel(path)) <= 0) return false;
+            if ((sound ? Engine.PrecacheSound(path) : Engine.PrecacheModel(path)) <= 0) return false;
         }
         return true;
     }
@@ -84,14 +84,14 @@ public static unsafe partial class Natives
         weapon.Sound4 = silencedFireSound2;
         weapon.BuyCommand = command;
 
-        if (pModel.Length > 0) Eng.PrecacheModel(pModel);
-        if (vModel.Length > 0) Eng.PrecacheModel(vModel);
-        if (wModel.Length > 0) Eng.PrecacheModel(wModel);
-        if (sightModel.Length > 0) Eng.PrecacheModel(sightModel);
-        if (fireSound1.Length > 0) Eng.PrecacheSound(fireSound1);
-        if (fireSound2.Length > 0) Eng.PrecacheSound(fireSound2);
-        if (silencedFireSound1.Length > 0) Eng.PrecacheSound(silencedFireSound1);
-        if (silencedFireSound2.Length > 0) Eng.PrecacheSound(silencedFireSound2);
+        if (pModel.Length > 0) Engine.PrecacheModel(pModel);
+        if (vModel.Length > 0) Engine.PrecacheModel(vModel);
+        if (wModel.Length > 0) Engine.PrecacheModel(wModel);
+        if (sightModel.Length > 0) Engine.PrecacheModel(sightModel);
+        if (fireSound1.Length > 0) Engine.PrecacheSound(fireSound1);
+        if (fireSound2.Length > 0) Engine.PrecacheSound(fireSound2);
+        if (silencedFireSound1.Length > 0) Engine.PrecacheSound(silencedFireSound1);
+        if (silencedFireSound2.Length > 0) Engine.PrecacheSound(silencedFireSound2);
 
         WeaponStore.ApplyDefaultSoundVolumes();
         return i;
@@ -177,14 +177,14 @@ public static unsafe partial class Natives
         weapon.Sound6 = knifeSound6;
         weapon.BuyCommand = command;
 
-        if (pModel.Length > 0) Eng.PrecacheModel(pModel);
-        if (vModel.Length > 0) Eng.PrecacheModel(vModel);
-        if (knifeSound1.Length > 0) Eng.PrecacheSound(knifeSound1);
-        if (knifeSound2.Length > 0) Eng.PrecacheSound(knifeSound2);
-        if (knifeSound3.Length > 0) Eng.PrecacheSound(knifeSound3);
-        if (knifeSound4.Length > 0) Eng.PrecacheSound(knifeSound4);
-        if (knifeSound5.Length > 0) Eng.PrecacheSound(knifeSound5);
-        if (knifeSound6.Length > 0) Eng.PrecacheSound(knifeSound6);
+        if (pModel.Length > 0) Engine.PrecacheModel(pModel);
+        if (vModel.Length > 0) Engine.PrecacheModel(vModel);
+        if (knifeSound1.Length > 0) Engine.PrecacheSound(knifeSound1);
+        if (knifeSound2.Length > 0) Engine.PrecacheSound(knifeSound2);
+        if (knifeSound3.Length > 0) Engine.PrecacheSound(knifeSound3);
+        if (knifeSound4.Length > 0) Engine.PrecacheSound(knifeSound4);
+        if (knifeSound5.Length > 0) Engine.PrecacheSound(knifeSound5);
+        if (knifeSound6.Length > 0) Engine.PrecacheSound(knifeSound6);
         return i;
     }
 
@@ -215,7 +215,7 @@ public static unsafe partial class Natives
             (vModel, false), (wModel, false), (explodeSound, true))) return 0;
         if (!WeaponStore.TryCreateTemplate(out int i)) return 0;
         int grenadeSprId = 0;
-        if (explodeSpr.Length > 0) grenadeSprId = Eng.PrecacheModel(explodeSpr);
+        if (explodeSpr.Length > 0) grenadeSprId = Engine.PrecacheModel(explodeSpr);
 
         var weapon = WeaponStore.Config[i];
         weapon.Id = EngineConst.CswHegrenade;
@@ -237,10 +237,10 @@ public static unsafe partial class Natives
         weapon.Sound1 = explodeSound;
         weapon.BuyCommand = command;
 
-        if (pModel.Length > 0) Eng.PrecacheModel(pModel);
-        if (vModel.Length > 0) Eng.PrecacheModel(vModel);
-        if (wModel.Length > 0) Eng.PrecacheModel(wModel);
-        if (explodeSound.Length > 0) Eng.PrecacheSound(explodeSound);
+        if (pModel.Length > 0) Engine.PrecacheModel(pModel);
+        if (vModel.Length > 0) Engine.PrecacheModel(vModel);
+        if (wModel.Length > 0) Engine.PrecacheModel(wModel);
+        if (explodeSound.Length > 0) Engine.PrecacheSound(explodeSound);
         return i;
     }
 }

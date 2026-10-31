@@ -4,9 +4,51 @@ using GoldSrc.HLSDK.Native;
 
 namespace Module;
 
-// register_message 回调(wt_DeathMsg / wt_TextMsg / wt_TempEntity / wt_StatusIcon)。
-public static unsafe partial class Callbacks
+// 武器表现事件:wt_CurWeapon(视/枪模型切换)与 wt_DeathMsg(武器击杀图标)。
+public static unsafe partial class WeaponView
 {
+    [AmxxCallback("wt_CurWeapon")]
+    public static void OnCurWeaponEvent(int id) => EventCurWeapon(id);
+
+    // public Event_CurWeapon(id) — 同时被 CurWeapon 事件与 Ham_UseStationary 复用
+    public static void EventCurWeapon(int id)
+    {
+        if (!Engine.IsAlive(id)) return;
+
+        var pPlayer = Engine.EntOfIndex(id);
+        if (pPlayer == null) return;
+        var pEntity = Engine.GetPDataCbase(pPlayer, 373);
+        if (!Engine.IsValid(pEntity)) return;
+
+        int i = WeaponStore.GetWeaponType(pEntity);
+        if (i == 0) return;
+
+        // 开镜时取消V模型
+        if (PlayerStocks.GetUserZoom(id) == 2 || PlayerStocks.GetUserZoom(id) == 3) Engine.SetViewModel(pPlayer, "");
+        else Engine.SetViewModel(pPlayer, WeaponStore.Weapon(id, i).VModel);
+        Engine.SetWeaponModel(pPlayer, WeaponStore.Weapon(id, i).PModel);
+
+        // 无弹夹子弹的武器
+        if (WeaponStore.Weapon(id, i).Clip == 0 && WeaponStore.Weapon(id, i).Id != EngineConst.CswHegrenade && WeaponStore.Weapon(id, i).Id != EngineConst.CswKnife)
+        {
+            int clip = Engine.GetPDataInt(pEntity, 51);
+            PlayerStocks.SetUserBpAmmo(id, WeaponStore.Weapon(id, i).Id, clip);
+            Engine.MessageBegin(EngineConst.MsgOne, Engine.UserMsgId("CurWeapon"), null, pPlayer);
+            Engine.WriteByte(1);
+            Engine.WriteByte(WeaponStore.Weapon(id, i).Id);
+            Engine.WriteByte(0xFF); // Pawn write_byte(-1) 的单字节效果
+            Engine.MessageEnd();
+            Engine.MessageBegin(EngineConst.MsgOne, Engine.UserMsgId("AmmoX"), null, pPlayer);
+            Engine.WriteByte(GameTables.GameWeaponAmmoId[WeaponStore.Weapon(id, i).Id]);
+            Engine.WriteByte(clip);
+            Engine.MessageEnd();
+        }
+
+        // 机瞄V模型
+        if (WeaponStore.Weapon(id, i).Sight != 0 && WeaponStore.Player(id).SightMode == WpnConst.Open)
+            Engine.SetViewModel(pPlayer, WeaponStore.Weapon(id, i).SightModel);
+    }
+
     [AmxxCallback("wt_DeathMsg")]
     public static int OnDeathMsg(int msgId, int msgDest, int msgEntity)
     {
@@ -49,12 +91,12 @@ public static unsafe partial class Callbacks
         else
         {
             // debug处理，防止特殊击杀时出现武器击杀图标
-            var pPlayer = Eng.EntOfIndex(id);
+            var pPlayer = Engine.EntOfIndex(id);
             for (int j = 0; j < GameTables.GameWeaponKillSpr.Length; j++)
             {
                 if (GameTables.GameWeaponKillSpr[j].Length == 0) continue;
                 if (GameTables.GameWeaponKillSpr[j] != weapon) continue;
-                entityIndex = pPlayer == null ? 0 : Eng.IndexOf(Eng.GetPDataCbase(pPlayer, 373));
+                entityIndex = pPlayer == null ? 0 : Engine.IndexOf(Engine.GetPDataCbase(pPlayer, 373));
             }
         }
         if (entityIndex <= 0)
@@ -74,51 +116,6 @@ public static unsafe partial class Callbacks
         AmxModX.SetMsgArgString(4, killSpr);
         int finalResult = NativeFunctionRegister.Execute_WpnDeathMsg(id, victim, headshot, killSpr);
         if (finalResult == WpnConst.WPN_SUPERCEDE) return EngineConst.PluginHandled;
-        return EngineConst.PluginContinue;
-    }
-
-    [AmxxCallback("wt_TextMsg")]
-    public static int OnTextMsg(int msgId, int msgDest, int msgEntity)
-    {
-        AmxModX.GetMsgArgString(2, out var textArg, 31);
-        string text = textArg ?? "";
-
-        // 重置弹药
-        if (text == "#Game_will_restart_in" || text == "#Game_Commencing") WeaponStore.RoundRestart = true;
-        return EngineConst.PluginContinue;
-    }
-
-    [AmxxCallback("wt_TempEntity")]
-    public static int OnTempEntity(int msgId, int msgDest, int msgEntity)
-    {
-        if (WeaponStore.BloodColor == 0) return EngineConst.PluginContinue;
-
-        // 设置血液颜色
-        int first = AmxModX.GetMsgArgInt(1);
-        if (first == EngineConst.TeBloodSprite || first == EngineConst.TeBlood || first == EngineConst.TeBloodstream)
-        {
-            int color = AmxModX.GetMsgArgInt(7);
-            int result = NativeFunctionRegister.Execute_WpnHookSpawnBlood(color);
-            if (result == WpnConst.WPN_SUPERCEDE) return EngineConst.PluginHandled;
-            AmxModX.SetMsgArgInt(7, EngineConst.ArgByte, WeaponStore.BloodColor);
-        }
-        return EngineConst.PluginContinue;
-    }
-
-    [AmxxCallback("wt_StatusIcon")]
-    public static int OnStatusIcon(int msgId, int msgDest, int msgEntity)
-    {
-        AmxModX.GetMsgArgString(2, out var statusArg, 32);
-        string statusName = statusArg ?? "";
-
-        // 出现buyzone图标时说明BOT在购买区
-        if (statusName == "buyzone")
-        {
-            if (!Eng.IsConnected(msgEntity)) return EngineConst.PluginContinue;
-            if (!Eng.IsBot(msgEntity)) return EngineConst.PluginContinue;
-            if (!WeaponStore.Player(msgEntity).BotBuyWeapon) return EngineConst.PluginContinue;
-            WeaponStore.Player(msgEntity).BotNextThink = Eng.GameTime + 0.1f;
-        }
         return EngineConst.PluginContinue;
     }
 }

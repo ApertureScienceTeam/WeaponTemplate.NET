@@ -62,8 +62,8 @@ public static unsafe class WeaponStore
     // GetWeaponType(iEntity) 的 C# 对应:读武器实体 11 号单元的模板序号。
     public static int GetWeaponType(edict_t* ent)
     {
-        if (!Eng.IsValid(ent)) return 0;
-        int serial = Eng.GetPDataInt(ent, 11);
+        if (!Engine.IsValid(ent)) return 0;
+        int serial = Engine.GetPDataInt(ent, 11);
         return serial >= 1 && serial <= WeaponAmount ? serial : 0;
     }
 

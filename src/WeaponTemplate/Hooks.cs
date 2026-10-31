@@ -320,8 +320,11 @@ public static unsafe class Hooks
                 Eng.ClientPrintCenter(id, "#Cstrike_TitlesTXT_Not_Enough_Money");
                 return true;
             }
+            MF.Log($"[diag] buy '{command}' tpl={i} csw={Store.WeaponId[id, i]} cls={Store.GameWeaponClassName[Store.WeaponId[id, i]]} money={Eng.GetPDataInt(pPlayer, 115)} cost={Store.WeaponCost[id, i]}");
             int entityIndex = Core.GiveWeaponByTemplate(id, i);
-            if (Eng.IsValidIndex(entityIndex))
+            bool given = Core.PlayerHasItem(id, entityIndex);
+            MF.Log($"[diag] buy give idx={entityIndex} valid={Eng.IsValidIndex(entityIndex)} owned={given}");
+            if (given)
             {
                 Core.SetUserMoney(id, Eng.GetPDataInt(pPlayer, 115) - Store.WeaponCost[id, i]);
 
@@ -331,6 +334,7 @@ public static unsafe class Hooks
                     Core.SetUserBpAmmo(id, Store.WeaponId[id, i], Store.WeaponAmmo[id, i]);
                 NativeFunctionRegister.Execute_WpnBuyWeaponPost(entityIndex, id, i);
             }
+            else MF.Log($"[diag] buy skipped charge: weapon not in player inventory (idx={entityIndex})");
             return true;
         }
         return false;

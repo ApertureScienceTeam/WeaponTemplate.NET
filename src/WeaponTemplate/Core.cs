@@ -8,6 +8,10 @@ namespace Module;
 // Pawn 的实体下标语义在 C# 中用 edict_t* + Eng.IndexOf 表达。
 public static unsafe class Core
 {
+    // m_bIsVIP：Windows 字节偏移 837，落在 pdata 单元 209 的第 2 个字节
+    private const int VipCell = 209;
+    private const int VipBit = 0x100;
+
     // ---- 向量小工具(替代 xs 库) ----
 
     public static void VecAdd(Span<float> a, Span<float> b, Span<float> dst)
@@ -409,6 +413,17 @@ public static unsafe class Core
         return true;
     }
 
+    // 实体是否真的进了玩家的武器槽(m_rgpPlayerItems[0..5],Windows 单元 367..372)
+    public static bool PlayerHasItem(int id, int entityIndex)
+    {
+        if (entityIndex <= 0) return false;
+        var pPlayer = Eng.EntOfIndex(id);
+        if (pPlayer == null) return false;
+        for (int slot = 367; slot <= 372; slot++)
+            if (Eng.IndexOf(Eng.GetPDataCbase(pPlayer, slot)) == entityIndex) return true;
+        return false;
+    }
+
     // public GiveWeapon(id, szClassName[], i) — 创建/复用实体发放
     public static edict_t* GiveWeapon(int id, string className, int i)
     {
@@ -445,7 +460,12 @@ public static unsafe class Core
         }
 
         entity = Eng.CreateNamedEntity(className);
-        if (!Eng.IsValid(entity)) return null;
+        MF.Log($"[diag] give create '{className}' tpl={i} idx={(entity == null ? -1 : Eng.IndexOf(entity))} pdata={(entity == null || entity->pvPrivateData == null ? 0 : 1)}");
+        if (!Eng.IsValid(entity))
+        {
+            MF.Log("[diag] give abort: entity invalid right after CreateNamedEntity");
+            return null;
+        }
         Eng.SetPDataInt(entity, 11, i);
         int slot = MF.CallNative("ExecuteHam", EngineConst.HamItemItemSlot, Eng.IndexOf(entity));
         var existing = Eng.GetPDataCbase(pPlayer, 365 + slot + 2);
@@ -453,38 +473,57 @@ public static unsafe class Core
         {
             int weaponType = Store.GetWeaponType(existing);
             string existingClass = Eng.ClassName(existing);
+            MF.Log($"[diag] give slot={slot} existing={Eng.IndexOf(existing)} existingTpl={weaponType} existingCls={existingClass}");
             if ((weaponType == i && i != 0 && weaponType != 0 && slot != 4) || (i == 0 && weaponType == 0 && className == existingClass && slot != 4))
             {
                 Eng.RemoveEntity(entity);
+                MF.Log("[diag] give abort: already own same weapon");
                 Eng.ClientPrintCenter(id, "#Cstrike_Already_Own_Weapon");
                 return null;
             }
             if (slot < 3)
             {
+                MF.Log($"[diag] give drop '{existingClass}'");
                 Eng.EngClientCommand(id, "drop", existingClass);
             }
         }
+        else MF.Log($"[diag] give slot={slot} existing=none");
 
         var origin = pPlayer->v.origin;
         entity->v.origin = origin;
         entity->v.spawnflags = EngineConst.SfNoRespawn;
 
         var gamedll = ModuleRuntime.gpGamedllFuncs->dllapi_table;
-        gamedll->pfnSpawn(entity);
+        int spawnResult = gamedll->pfnSpawn(entity);
+        int entityIndex = Eng.IndexOf(entity);
+        MF.Log($"[diag] give spawn idx={entityIndex} ret={spawnResult} csw={Eng.GetPDataInt(entity, 43)} serial={Eng.GetPDataInt(entity, 11)}");
+
+        // CS 的 CBasePlayerItem::DefaultTouch 会拒绝 VIP 拾取非手枪/刀(as_ 刺杀图)，这是游戏规则，不绕过
+        bool isVip = (Eng.GetPDataInt(pPlayer, VipCell) & VipBit) != 0;
         gamedll->pfnTouch(entity, pPlayer);
+
+        MF.Log($"[diag] give touch idx={entityIndex} vip={isVip} free={entity->free} csw={Eng.GetPDataInt(entity, 43)} playerPrimary={Eng.IndexOf(Eng.GetPDataCbase(pPlayer, 368))} active={Eng.IndexOf(Eng.GetPDataCbase(pPlayer, 373))} carried=0x{pPlayer->v.weapons:X8}");
         return entity;
     }
 
     // public Native_GiveWeapon(id, i) — 模板发放入口
     public static int GiveWeaponByTemplate(int id, int i)
     {
-        if (!Store.IsTemplate(i) || !Eng.IsAlive(id)) return 0;
+        if (!Store.IsTemplate(i) || !Eng.IsAlive(id))
+        {
+            MF.Log($"[diag] give abort: template={i} amount={Store.WeaponAmount} alive={Eng.IsAlive(id)}");
+            return 0;
+        }
 
         var pPlayer = Eng.EntOfIndex(id);
         if (pPlayer == null) return 0;
         var curEntity = Eng.GetPDataCbase(pPlayer, 373);
         var entity = GiveWeapon(id, Store.GameWeaponClassName[Store.WeaponId[id, i]], i);
-        if (!Eng.IsValid(entity)) return 0;
+        if (!Eng.IsValid(entity))
+        {
+            MF.Log($"[diag] give abort: GiveWeapon returned invalid (tpl={i} cls={Store.GameWeaponClassName[Store.WeaponId[id, i]]})");
+            return 0;
+        }
 
         int csw = Store.WeaponId[id, i];
 

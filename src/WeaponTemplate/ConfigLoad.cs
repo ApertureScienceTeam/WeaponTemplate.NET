@@ -223,6 +223,10 @@ public static unsafe class ConfigLoad
             if (!Store.TryCreateTemplate(out int index)) continue;
             Store.WeaponTemplateSerialNumber[slot, serial] = index;
             for (int id = 1; id < 33; id++) Store.WeaponId[id, index] = csw;
+            MF.Log($"[diag] template slot={slot} serial={serial} index={index} csw={csw} " +
+                $"buy='{entries.LastOrDefault(e => e.Key == "购买命令").Value}' " +
+                $"cost='{entries.LastOrDefault(e => e.Key == "价格").Value}' " +
+                $"hud='{entries.LastOrDefault(e => e.Key == "HUD菜单").Value}'");
             yield return (index, entries);
         }
     }
